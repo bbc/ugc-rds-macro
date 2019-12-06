@@ -3,6 +3,7 @@ import os
 import json
 
 from io import StringIO
+client = boto3.client('rds')
 
 
 def handler(event, context):
@@ -22,10 +23,19 @@ def handler(event, context):
         
         db_instance = os.environ['db_instance']
         if db_instance.strip():
-            client = boto3.client('rds')
-            snapshots = client.describe_db_snapshots(
+           
+            
+            snapshot_type = os.environ['snapshot_type']
+
+            if snapshot_type.rstrip():
+                snapshots = client.describe_db_snapshots(
+                    DBInstanceIdentifier=db_instance,
+                    SnapshotType=snapshot_type
+                )
+            else:
+                snapshots = client.describe_db_snapshots(
                     DBInstanceIdentifier=db_instance
-            )
+                )
 
             print('snapshots_id={0}'.format(snapshots))
 
