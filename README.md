@@ -39,6 +39,12 @@ After making code changes run the following command to create a new zip, upload 
 
 ``upload.sh``
 
+##### Testing
+
+Within the `src` directory type:
+
+`python -m pytest`
+
 ##### Lambda Configuration
 
 Below are the list of global environment variables used by the lambda
