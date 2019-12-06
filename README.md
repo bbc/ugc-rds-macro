@@ -1,6 +1,25 @@
 # ugc-rds-macro
 
-This is an aws cloudformation macro that is used to manipulate the template fragment of type `AWS::RDS::DBInstance`
+This is a aws cloudformation macro that is used to manipulate the template fragment of type `AWS::RDS::DBInstance`
+
+
+
+### Usage
+
+Due to  validation constraints imposed by troposphere it makes it slightly arduos to specify the transform, when using this macro in your template. The following is provided by troposhere to support fn intinsic functions https://github.com/cloudtools/troposphere/blob/master/troposphere/__init__.py#L391.
+
+But found the process to be slightly obtuse. So used the following approach instead.
+
+```y = json.loads(t.to_json())
+y = json.loads(t.to_json())
+for key, value in y.items():
+    if key == "Resources":
+        for k, v in value.items():
+            if  k == "RdsPostGresDatabase":
+                d = {'Name':'UgcRdsMacro'} 
+                k = {'Fn::Transform': d}
+                v.update(k)
+```
 
 ### Lambda
 
@@ -43,4 +62,6 @@ To generate the cloudformation stack.
 | Generate virtual env          | `make venv`                          |
 | Activate virutal env          | `source env/bin/activate`            |
 | generate cloudformation stack | `python infrastructure/rds_macro.py` |
+
+
 
