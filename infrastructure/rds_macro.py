@@ -17,7 +17,7 @@ t.add_description("Used manipulate the DbInstance Template")
 rds_macro_handler = t.add_parameter(Parameter(
     "LambdaHandler",
     Type="String",
-    Default="ugc_rds_cr_snapshot_id.handler",
+    Default="ugc_rds_macro.handler",
     Description="The name of the function (within your source code) "
                 "that Lambda calls to start running your code."
 ))
@@ -87,9 +87,10 @@ rds_macro_lambda = t.add_resource(
         ),
         Environment=Environment(Variables={
             'latest_snapshot': 'true',
-            'property_to_remove': 'BackupRetentionPeriod',
-            'property_to_add':'{"BackupRetentionPeriod": {"Ref": "BackupRetentionDays"}}',
-            'db_instance':''
+            'properties_to_remove': 'DBInstanceIdentifier,DBName',
+            'properties_to_add':'',
+            'db_instance':'arn:aws:rds:eu-west-2:546933502184:db:mv-ugc-postgres',
+            'snapshot_type':''
             }
         ),
         Description="Function used to manipulate the dbinstance template",

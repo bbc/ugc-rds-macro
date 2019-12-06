@@ -2,7 +2,7 @@ import boto3
 import os
 import json
 
-
+from io import StringIO
 
 
 def handler(event, context):
@@ -12,9 +12,7 @@ def handler(event, context):
     status = "success"
 
     expec = str('true')
-
     print('fragment_before_modification={0}'.format(fragment))
-
     latest_snaphost = os.environ.get('latest_snapshot')
     print("type'{0}'".format(repr(latest_snaphost)))
     print('latest_snapshot {0}'.format(latest_snaphost.rstrip().strip().lower()))
@@ -44,29 +42,26 @@ def handler(event, context):
                     if key == 'Properties':
                         del value['DBSnapshotIdentifier']
 
-    property_to_remove = os.environ['property_to_remove']
-    print("to remove {0}".format(property_to_remove))
+    properties_to_remove = os.environ['properties_to_remove']
+    print("to remove {0}".format(properties_to_remove))
 
-    props_to_remove = property_to_remove.split(",")
-    if len(props_to_remove) > 0:
+    props_to_remove = properties_to_remove.split(",")
+    if properties_to_remove.rstrip():
         for prop_to_remove in props_to_remove:
             for key, value in fragment.items():
                 if key == 'Properties':
-                    del value[prop_to_remove]
+                    del value[prop_to_remove.strip()]
     print('fragment_after_removing_property={0}'.format(fragment))
 
-    property_to_add = os.environ['property_to_add']
-    print("to addd {0}".format(property_to_add))
-
-    props_to_add = property_to_add.split(',')
-    if len(props_to_add) > 0:
+    properties_to_add = os.environ['properties_to_add']
+    props_to_add = properties_to_add.split(",")
+    if properties_to_add.rstrip():
         for prop_to_add in props_to_add:
             for key, value in fragment.items():
                 if key == 'Properties':
-                    p = json.loads(prop_to_add)
+                    p = json.loads(prop_to_add.rstrip())
                     value.update(p)
-            print('fragment_after_adding_property={0}'.format(fragment))
-    
+            
     print('fragment_after_modification={0}'.format(fragment))
     return {
         "requestId": event["requestId"],
