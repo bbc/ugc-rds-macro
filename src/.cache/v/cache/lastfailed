@@ -1,0 +1,4 @@
+{
+  "tests/test_ugc_rds_macro.py::test_handler_add_property": true,
+  "tests/test_ugc_rds_macro.py::test_handler_remove_property": true
+}
