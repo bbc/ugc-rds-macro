@@ -2,8 +2,6 @@
 
 This is an aws cloudformation macro that is used to manipulate the template fragment of type `AWS::RDS::DBInstance`
 
-` `**aws s3 mb s3://bucket-name**
-
 ### Lambda
 
 ##### Setup
