@@ -90,7 +90,12 @@ rds_macro_lambda = t.add_resource(
             'properties_to_remove': 'DBInstanceIdentifier,DBName',
             'properties_to_add':'',
             'db_instance':'arn:aws:rds:eu-west-2:546933502184:db:mv-ugc-postgres',
-            'snapshot_type':''
+            'snapshot_type':'',
+            "restore":"yes",
+            "restore_time`":"2009-09-07T23:45:00Z",
+            "restore_point_in_time":"false",
+            "restore_time":"no",
+            "target_db_instance":"no"
             }
         ),
         Description="Function used to manipulate the dbinstance template",

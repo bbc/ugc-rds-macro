@@ -1,0 +1,191 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Used manipulate the DbInstance Template",
+    "Parameters": {
+        "LambdaEnv": {
+            "AllowedValues": [
+                "int",
+                "test",
+                "live"
+            ],
+            "Description": "The environment the lambda is being deployed to",
+            "Type": "String"
+        },
+        "LambdaExectionTime": {
+            "Default": "300",
+            "Description": "Lambda Execution time",
+            "Type": "Number"
+        },
+        "LambdaHandler": {
+            "Default": "ugc_rds_macro.handler",
+            "Description": "The name of the function (within your source code) that Lambda calls to start running your code.",
+            "Type": "String"
+        },
+        "LambdaMemorySize": {
+            "Default": "1024",
+            "Description": "The amount of memory, in MB, that is allocated to your Lambda function.",
+            "MinValue": "128",
+            "Type": "Number"
+        }
+    },
+    "Resources": {
+        "DBInstanceManipulator": {
+            "Properties": {
+                "Description": "This is use to invoke the function that modifies the db instance template",
+                "FunctionName": {
+                    "Fn::GetAtt": [
+                        "RdsSnapShotLambdaFunction",
+                        "Arn"
+                    ]
+                },
+                "LogGroupName": {
+                    "Ref": "LogGroupForRDSMacro"
+                },
+                "LogRoleARN": {
+                    "Fn::GetAtt": [
+                        "RdsMacroLogRole",
+                        "Arn"
+                    ]
+                },
+                "Name": "UgcRdsMacro"
+            },
+            "Type": "AWS::CloudFormation::Macro"
+        },
+        "FunctionRole": {
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": [
+                                "sts:AssumeRole"
+                            ],
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "lambda.amazonaws.com"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "Policies": [
+                    {
+                        "PolicyDocument": {
+                            "Statement": [
+                                {
+                                    "Action": [
+                                        "logs:CreateLogGroup",
+                                        "logs:CreateLogStream",
+                                        "logs:PutLogEvents"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": [
+                                        "arn:aws:logs:*:*:*"
+                                    ]
+                                },
+                                {
+                                    "Action": [
+                                        "rds:DescribeDBSnapshots"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": [
+                                        "arn:aws:rds:*:*:*"
+                                    ]
+                                }
+                            ]
+                        },
+                        "PolicyName": "UgcMoniorFunctionRolePolicy"
+                    }
+                ]
+            },
+            "Type": "AWS::IAM::Role"
+        },
+        "LogGroupForRDSMacro": {
+            "DeletionPolicy": "Retain",
+            "Type": "AWS::Logs::LogGroup"
+        },
+        "RdsMacroLogRole": {
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": [
+                                "sts:AssumeRole"
+                            ],
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "cloudformation.amazonaws.com"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "Policies": [
+                    {
+                        "PolicyDocument": {
+                            "Statement": [
+                                {
+                                    "Action": [
+                                        "logs:*"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": [
+                                        "arn:aws:logs:*:*:*"
+                                    ]
+                                },
+                                {
+                                    "Action": [
+                                        "rds:DescribeDBSnapshots"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": [
+                                        "arn:aws:rds:*:*:*"
+                                    ]
+                                }
+                            ]
+                        },
+                        "PolicyName": "FunctionRolePolicy"
+                    }
+                ]
+            },
+            "Type": "AWS::IAM::Role"
+        },
+        "RdsSnapShotLambdaFunction": {
+            "Properties": {
+                "Code": {
+                    "S3Bucket": "rds-snapshot-id-lambda",
+                    "S3Key": "rdsmacroinstance.zip"
+                },
+                "Description": "Function used to manipulate the dbinstance template",
+                "Environment": {
+                    "Variables": {
+                        "db_instance": "arn:aws:rds:eu-west-2:546933502184:db:mv-ugc-postgres",
+                        "latest_snapshot": "true",
+                        "properties_to_add": "",
+                        "properties_to_remove": "DBInstanceIdentifier,DBName",
+                        "snapshot_type": ""
+                    }
+                },
+                "FunctionName": {
+                    "Fn::Sub": "${LambdaEnv}-ugc-rds-macro"
+                },
+                "Handler": {
+                    "Ref": "LambdaHandler"
+                },
+                "MemorySize": {
+                    "Ref": "LambdaMemorySize"
+                },
+                "Role": {
+                    "Fn::GetAtt": [
+                        "FunctionRole",
+                        "Arn"
+                    ]
+                },
+                "Runtime": "python3.7",
+                "Timeout": 180
+            },
+            "Type": "AWS::Lambda::Function"
+        }
+    }
+}

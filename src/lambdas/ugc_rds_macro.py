@@ -5,7 +5,6 @@ import json
 from io import StringIO
 client = boto3.client('rds')
 
-
 def handler(event, context):
     print('this is the event = {}'.format(event))
     rd_stack_name = os.environ['rds_stack_name'].rstrip()
@@ -74,17 +73,18 @@ def handler(event, context):
             
     print("fragment_after_modification={0}".format(fragment))
 
-
     restore = os.environ['restore_point_in_time'].rstrip()
     restore_time = os.environ['restore_time'].rstrip()
     target_db_instance = os.environ['target_db_instance'].rstrip()
     resp = None
+
     print("this is restor{0}".format(restore))
     if restore and latest_snaphost.lower() != "true":
         instances = client.describe_db_instances()
+        print("instances {0}".format(instances))
         db_instance = parse_db_identifier(instances, rd_stack_name)
-        print("checking resotre: db_instance{0}".format(db_instance))
-        if restore_time:
+        print("checking restoring: db_instance{0}".format(db_instance))
+        if restore.lower() == "true" and restore_time:
             resp = client.restore_db_instance_to_point_in_time(
                 SourceDBInstanceIdentifier=db_instance,
                 RestoreTime=restore_time)
