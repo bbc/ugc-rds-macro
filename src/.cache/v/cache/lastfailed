@@ -1,1 +1,3 @@
-{}
+{
+  "tests/test_ugc_rds_macro.py::test_point_in_time_restore_latest_restorable_time": true
+}

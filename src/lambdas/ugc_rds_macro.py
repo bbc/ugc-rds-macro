@@ -8,7 +8,7 @@ client = boto3.client('rds')
 
 def handler(event, context):
     print('this is the event = {}'.format(event))
-
+    rd_stack_name = os.environ['rds_stack_name'].rstrip()
     fragment = event["fragment"]
     status = "success"
 
@@ -21,13 +21,13 @@ def handler(event, context):
     
     if latest_snaphost.strip().lower() in expec:
         
-        db_instance = os.environ['db_instance']
-        if db_instance.strip():
-           
-            
-            snapshot_type = os.environ['snapshot_type']
+        if rd_stack_name:
+            snapshot_type = os.environ['snapshot_type'].rstrip()
+            instances = client.describe_db_instances()
+            db_instance = parse_db_identifier(instances, rd_stack_name)
+            print("checking resotre: db_instance{0}".format(db_instance))
 
-            if snapshot_type.rstrip():
+            if snapshot_type:
                 snapshots = client.describe_db_snapshots(
                     DBInstanceIdentifier=db_instance,
                     SnapshotType=snapshot_type
@@ -72,9 +72,61 @@ def handler(event, context):
                     p = json.loads(prop_to_add.rstrip())
                     value.update(p)
             
-    print('fragment_after_modification={0}'.format(fragment))
+    print("fragment_after_modification={0}".format(fragment))
+
+
+    restore = os.environ['restore_point_in_time'].rstrip()
+    restore_time = os.environ['restore_time'].rstrip()
+    target_db_instance = os.environ['target_db_instance'].rstrip()
+    resp = None
+    print("this is restor{0}".format(restore))
+    if restore and latest_snaphost.lower() != "true":
+        instances = client.describe_db_instances()
+        db_instance = parse_db_identifier(instances, rd_stack_name)
+        print("checking resotre: db_instance{0}".format(db_instance))
+        if restore_time:
+            resp = client.restore_db_instance_to_point_in_time(
+                SourceDBInstanceIdentifier=db_instance,
+                RestoreTime=restore_time)
+        elif restore.lower() == "true":
+            resp = client.restore_db_instance_to_point_in_time(
+                SourceDBInstanceIdentifier=db_instance,
+                TargetDBInstanceIdentifier=target_db_instance,
+                UseLatestRestorableTime=True)
+
+    if resp:
+      print("response_from_restore = {0}".format(resp))
+    
     return {
         "requestId": event["requestId"],
         "status": status,
         "fragment": fragment,
     }
+
+def parse_db_identifier(response, key):
+    found = None
+    for item in response['DBInstances']:
+       for k,v in item.items():
+           if str(k) in str('DBInstanceIdentifier'):
+              db_inst_id = str(v)
+                
+          
+           """
+                if str(k) in str('Endpoint'):
+               address = v['Address']
+           """
+
+           if str(k) in str('DBSubnetGroup'):
+                if str(v['DBSubnetGroupName']).startswith(key):
+                    db_instance_id = db_inst_id
+                    db_subnet_group = v['DBSubnetGroupName']
+                    found = True
+
+    if found:
+        return db_instance_id
+        #print("db_instance={0} db_subnet_group={1}".format(db_instance_id, db_subnet_group))    
+        #if found: 
+        #    print("adress={0} db_subnet_group={1}".format(address, db_subnet_group))
+        #DBParameterGroups
+ 
+    return None
