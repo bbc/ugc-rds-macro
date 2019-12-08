@@ -129,7 +129,6 @@ Below is an example policy:
             ],
             "Resource": "*"
         }
-    ]
 ```
 
 

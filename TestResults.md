@@ -66,7 +66,37 @@ It inherits the kms key used by the snapshot. If you restore from a diferent env
 
 ### 3: Restore to Latest Restorable Point:
 
-Below are the tests which will be performed.
+The following table shows the lambda configuration which will cause the macro to restore the database to  the latest point in time. But makes no changes to the cloudformation template.
+
+| Property              | Value                       |      |
+| --------------------- | --------------------------- | ---- |
+| rds_stack_name        | mv-rds-db-stack             |      |
+| latest_snaphot        | false                       |      |
+| properties_to_add     |                             |      |
+| properties_to_remove  | DBInstanceIdentifier,DBName |      |
+| restore_point_in_time | true                        |      |
+| restore_time          |                             |      |
+| snapshot_type         |                             |      |
+| target_db_instancei   | my_target_instance          |      |
+
+### 4: Restore to a specific point in time:
+
+The following table shows the lambda configuration which will cause the macro to restore the database to  the latest point in time. But makes no changes to the cloudformation template.
+
+| Property              | Value                       |      |
+| --------------------- | --------------------------- | ---- |
+| rds_stack_name        | mv-rds-db-stack             |      |
+| latest_snaphot        | false                       |      |
+| properties_to_add     |                             |      |
+| properties_to_remove  | DBInstanceIdentifier,DBName |      |
+| restore_point_in_time | true                        |      |
+| restore_time          |                             |      |
+| snapshot_type         |                             |      |
+| target_db_instancei   | my_target_instance          |      |
+
+### 5: Validate point in time restore:
+
+Below are the tests which will be performed in order to validate the database restoration procedure.
 
 ##### Outline of Test steps:
 
@@ -85,17 +115,4 @@ Below are the tests which will be performed.
    2. swith to using snapshot
    3. modify data.. wait for 10 minutes.. modify data
    4. restore back to first modification.
-
-The following table shows the lambda configuration which will cause the macro to restore the database to  the latest point in time. But makes no changes to the cloudformation template.
-
-| Property              | Value                       |      |
-| --------------------- | --------------------------- | ---- |
-| rds_stack_name        | mv-rds-db-stack             |      |
-| latest_snaphot        | false                       |      |
-| properties_to_add     |                             |      |
-| properties_to_remove  | DBInstanceIdentifier,DBName |      |
-| restore_point_in_time | true                        |      |
-| restore_time          |                             |      |
-| snapshot_type         |                             |      |
-| target_db_instancei   | my_target_instance          |      |
 
