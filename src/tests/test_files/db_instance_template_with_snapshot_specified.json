@@ -1,0 +1,48 @@
+{
+  "Type": "AWS::RDS::DBInstance",
+  "Properties": {
+    "AllocatedStorage": {
+      "Ref": "AllocatedStorage"
+    },
+    "DBInstanceClass": {
+      "Ref": "InstanceClass"
+    },
+    "DBInstanceIdentifier": {
+      "Fn::Sub": "${Environment}-ugc-postgres"
+    },
+    "DBName": {
+      "Ref": "DatabaseName"
+    },
+    "DBParameterGroupName": {
+      "Ref": "ParameterGroup"
+    },
+    "DBSubnetGroupName": {
+      "Ref": "SubnetGroup"
+    },
+    "Engine": "postgres",
+    "EngineVersion": "9.6",
+    "KmsKeyId": {
+      "Fn::GetAtt": [
+        "UgcRdsEncryptionKey",
+        "Arn"
+      ]
+    },
+    "MasterUserPassword": {
+      "Ref": "DatabasePassword"
+    },
+    "MasterUsername": {
+      "Ref": "DatabaseUser"
+    },
+    "MultiAZ": {
+      "Ref": "MultiAZ"
+    },
+    "PubliclyAccessible": "false",
+    "StorageEncrypted": "true",
+    "VPCSecurityGroups": [
+      {
+        "Ref": "VPCSecurityGroup"
+      }
+    ],
+    "DBSnapshotIdentifier": "arn:aws:rds:eu-west-2:546933502184:snapshot:rds:mv-ugc-postgres-2019-12-06-11-10"
+  }
+}
