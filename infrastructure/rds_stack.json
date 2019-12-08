@@ -1,0 +1,383 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Create UGC RDS instances",
+  "Outputs": {
+    "RDSEncryptionKeyArn": {
+      "Description": "The arn of the database encryption key",
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${Environment}-RDSEncryptionKeyArn"
+        }
+      },
+      "Value": {
+        "Fn::GetAtt": [
+          "UgcRdsEncryptionKey",
+          "Arn"
+        ]
+      }
+    }
+  },
+  "Parameters": {
+    "AllocatedStorage": {
+      "ConstraintDescription": "Should be between 5 and 1024Gb.",
+      "Default": "20",
+      "Description": "Allocated storage for the database (Gb).",
+      "MaxValue": "1024",
+      "MinValue": "5",
+      "Type": "Number"
+    },
+    "BackupRetentionDays": {
+      "Default": 30,
+      "Description": "Number of days to retain automated backups for",
+      "Type": "Number"
+    },
+    "CauseUpdate": {
+      "Description": "Initiate an update",
+      "Type": "Number"
+    },
+    "DatabaseName": {
+      "AllowedPattern": "[a-zA-Z][a-zA-Z0-9]*",
+      "ConstraintDescription": "Should begin with a letter and contain only alphanumeric characters.",
+      "Default": "ugc",
+      "Description": "The name of the database to create.",
+      "MaxLength": "64",
+      "MinLength": "1",
+      "Type": "String"
+    },
+    "DatabasePassword": {
+      "AllowedPattern": "[a-zA-Z0-9]*",
+      "ConstraintDescription": "Should contain only alphanumeric characters.",
+      "Description": "The database admin account password.",
+      "MaxLength": "41",
+      "MinLength": "1",
+      "NoEcho": true,
+      "Type": "String"
+    },
+    "DatabaseUser": {
+      "AllowedPattern": "[a-zA-Z][a-zA-Z0-9]*",
+      "ConstraintDescription": "Should begin with a letter and contain only alphanumeric characters.",
+      "Default": "ugc",
+      "Description": "The database admin account username.",
+      "MaxLength": "16",
+      "MinLength": "1",
+      "Type": "String"
+    },
+    "DomainNameBase": {
+      "Default": "c7dff5ab13c48206.xhst.bbci.co.uk.",
+      "Description": "Base domain under which to create DNS records",
+      "Type": "String"
+    },
+    "Environment": {
+      "AllowedValues": [
+        "int",
+        "test",
+        "live",
+        "dv",
+        "mv"
+      ],
+      "Description": "The name of the environment.",
+      "Type": "String"
+    },
+    "InstanceClass": {
+      "AllowedValues": [
+        "db.t2.small",
+        "db.t2.medium",
+        "db.t2.large"
+      ],
+      "ConstraintDescription": "The database instance type to use.",
+      "Default": "db.t2.small",
+      "Description": "Database instance class.",
+      "Type": "String"
+    },
+    "MultiAZ": {
+      "AllowedValues": [
+        "true",
+        "false"
+      ],
+      "Default": "false",
+      "Description": "Replicate across multiple AZs?",
+      "Type": "String"
+    }
+  },
+  "Resources": {
+    "ParameterGroup": {
+      "Properties": {
+        "Description": "Parameters for the RDS DB",
+        "Family": "postgres9.6",
+        "Parameters": {
+          "rds.force_ssl": "1"
+        }
+      },
+      "Type": "AWS::RDS::DBParameterGroup"
+    },
+    "RdsPostGresDatabase": {
+      "Properties": {
+        "AllocatedStorage": {
+          "Ref": "AllocatedStorage"
+        },
+        "BackupRetentionPeriod": {
+          "Ref": "BackupRetentionDays"
+        },
+        "DBInstanceClass": {
+          "Ref": "InstanceClass"
+        },
+        "DBInstanceIdentifier": {
+          "Fn::Sub": "${Environment}-ugc-postgres"
+        },
+        "DBName": {
+          "Ref": "DatabaseName"
+        },
+        "DBParameterGroupName": {
+          "Ref": "ParameterGroup"
+        },
+        "DBSubnetGroupName": {
+          "Ref": "SubnetGroup"
+        },
+        "Engine": "postgres",
+        "EngineVersion": "9.6",
+        "KmsKeyId": {
+          "Fn::GetAtt": [
+            "UgcRdsEncryptionKey",
+            "Arn"
+          ]
+        },
+        "MasterUserPassword": {
+          "Ref": "DatabasePassword"
+        },
+        "MasterUsername": {
+          "Ref": "DatabaseUser"
+        },
+        "MultiAZ": {
+          "Ref": "MultiAZ"
+        },
+        "PubliclyAccessible": "false",
+        "StorageEncrypted": "true",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Ref": "CauseUpdate"
+            }
+          }
+        ],
+        "VPCSecurityGroups": [
+          {
+            "Ref": "VPCSecurityGroup"
+          }
+        ]
+      },
+      "Type": "AWS::RDS::DBInstance",
+      "Fn::Transform": {
+        "Name": "UgcRdsMacro"
+      }
+    },
+    "SubnetGroup": {
+      "Properties": {
+        "DBSubnetGroupDescription": "Subnets available for the RDS DB instance",
+        "SubnetIds": [
+          {
+            "Fn::ImportValue": "core-infrastructure-PrivateSubnet0"
+          },
+          {
+            "Fn::ImportValue": "core-infrastructure-PrivateSubnet1"
+          }
+        ]
+      },
+      "Type": "AWS::RDS::DBSubnetGroup"
+    },
+    "UGCDNSRecord": {
+      "Properties": {
+        "HostedZoneName": {
+          "Ref": "DomainNameBase"
+        },
+        "Name": {
+          "Fn::Sub": "ugc-postgres.${Environment}.${DomainNameBase}"
+        },
+        "ResourceRecords": [
+          {
+            "Fn::GetAtt": [
+              "RdsPostGresDatabase",
+              "Endpoint.Address"
+            ]
+          }
+        ],
+        "TTL": "300",
+        "Type": "CNAME"
+      },
+      "Type": "AWS::Route53::RecordSet"
+    },
+    "UgcPostgresPasswordsKey": {
+      "Properties": {
+        "Description": "Ugc Postgres Passwords Key",
+        "EnableKeyRotation": "true",
+        "Enabled": "true",
+        "KeyPolicy": {
+          "Id": "ugc-postgres-passwords-key-policy",
+          "Statement": [
+            {
+              "Action": [
+                "kms:*"
+              ],
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Ref": "AWS::AccountId"
+                }
+              },
+              "Resource": [
+                "*"
+              ],
+              "Sid": "Administer key via root"
+            },
+            {
+              "Action": [
+                "kms:Decrypt"
+              ],
+              "Condition": {
+                "StringEquals": {
+                  "kms:ViaService": "ssm.eu-west-2.amazonaws.com"
+                }
+              },
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": [
+                  {
+                    "Fn::ImportValue": {
+                      "Fn::Sub": "int-InputHandlerRole"
+                    }
+                  },
+                  {
+                    "Fn::ImportValue": {
+                      "Fn::Sub": "int-ManagerComponentRole"
+                    }
+                  },
+                  {
+                    "Fn::ImportValue": {
+                      "Fn::Sub": "int-CleanerComponentRole"
+                    }
+                  }
+                ]
+              },
+              "Resource": [
+                "*"
+              ],
+              "Sid": "Allow decryption"
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      },
+      "Type": "AWS::KMS::Key"
+    },
+    "UgcPostgresPasswordsKeyAlias": {
+      "Properties": {
+        "AliasName": {
+          "Fn::Join": [
+            "",
+            [
+              "alias/",
+              {
+                "Ref": "Environment"
+              },
+              "-ugc-postgres-passwords-key"
+            ]
+          ]
+        },
+        "TargetKeyId": {
+          "Ref": "UgcPostgresPasswordsKey"
+        }
+      },
+      "Type": "AWS::KMS::Alias"
+    },
+    "UgcRdsEncryptionKey": {
+      "Properties": {
+        "Description": "Ugc Rds Encryption Key",
+        "EnableKeyRotation": "true",
+        "Enabled": "true",
+        "KeyPolicy": {
+          "Id": "ugc-rds-encryption-key-policy",
+          "Statement": [
+            {
+              "Action": [
+                "kms:*"
+              ],
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Ref": "AWS::AccountId"
+                }
+              },
+              "Resource": [
+                "*"
+              ],
+              "Sid": "Administer key via root"
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      },
+      "Type": "AWS::KMS::Key"
+    },
+    "UgcRdsEncryptionKeyAlias": {
+      "Properties": {
+        "AliasName": {
+          "Fn::Join": [
+            "",
+            [
+              "alias/",
+              {
+                "Ref": "Environment"
+              },
+              "-ugc-rds-encryption-key"
+            ]
+          ]
+        },
+        "TargetKeyId": {
+          "Ref": "UgcRdsEncryptionKey"
+        }
+      },
+      "Type": "AWS::KMS::Alias"
+    },
+    "VPCSecurityGroup": {
+      "Properties": {
+        "GroupDescription": "Security group for RDS DB instance.",
+        "SecurityGroupIngress": [
+          {
+            "FromPort": 5432,
+            "IpProtocol": "tcp",
+            "SourceSecurityGroupId": {
+              "Fn::ImportValue": {
+                "Fn::Sub": "int-ManagerSecurityGroup"
+              }
+            },
+            "ToPort": 5432
+          },
+          {
+            "FromPort": 5432,
+            "IpProtocol": "tcp",
+            "SourceSecurityGroupId": {
+              "Fn::ImportValue": {
+                "Fn::Sub": "int-InputHandlerSecurityGroup"
+              }
+            },
+            "ToPort": 5432
+          },
+          {
+            "FromPort": 5432,
+            "IpProtocol": "tcp",
+            "SourceSecurityGroupId": {
+              "Fn::ImportValue": {
+                "Fn::Sub": "int-CleanerSecurityGroup"
+              }
+            },
+            "ToPort": 5432
+          }
+        ],
+        "VpcId": {
+          "Fn::ImportValue": "core-infrastructure-VpcId"
+        }
+      },
+      "Type": "AWS::EC2::SecurityGroup"
+    }
+  }
+}

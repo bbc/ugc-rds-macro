@@ -230,6 +230,7 @@ def test_snapshot_identifer_with_snapshot_type(s3_stub, monkeypatch, datafiles):
 
 @pytest.mark.datafiles(
     FIXTURE_DIR / 'db_instance_template.json',
+    FIXTURE_DIR / 'db_restore_to_point_in_time.json',
     FIXTURE_DIR / 'db_describe_instance_response.json'
 )
 def test_point_in_time_restore_latest_restorable_time(s3_stub, monkeypatch, datafiles):
@@ -268,7 +269,7 @@ def test_point_in_time_restore_latest_restorable_time(s3_stub, monkeypatch, data
     )
 
     (expected, db_instance_template) = _read_test_data(datafiles,
-                                                       "db_instance_template.json",
+                                                       "db_restore_to_point_in_time.json",
                                                        "db_instance_template.json")
 
     i = {'db_instance': 'instance_i'}

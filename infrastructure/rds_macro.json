@@ -91,6 +91,24 @@
                                     "Resource": [
                                         "arn:aws:rds:*:*:*"
                                     ]
+                                },
+                                {
+                                    "Action": [
+                                        "rds:DescribeDBInstances"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": [
+                                        "*"
+                                    ]
+                                },
+                                {
+                                    "Action": [
+                                        "rds:RestoreDBInstanceToPointInTime"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": [
+                                        "*"
+                                    ]
                                 }
                             ]
                         },
@@ -136,11 +154,29 @@
                                 },
                                 {
                                     "Action": [
+                                        "rds:DescribeDBInstances"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": [
+                                        "*"
+                                    ]
+                                },
+                                {
+                                    "Action": [
                                         "rds:DescribeDBSnapshots"
                                     ],
                                     "Effect": "Allow",
                                     "Resource": [
                                         "arn:aws:rds:*:*:*"
+                                    ]
+                                },
+                                {
+                                    "Action": [
+                                        "rds:RestoreDBInstanceToPointInTime"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": [
+                                        "*"
                                     ]
                                 }
                             ]
@@ -160,11 +196,14 @@
                 "Description": "Function used to manipulate the dbinstance template",
                 "Environment": {
                     "Variables": {
-                        "db_instance": "arn:aws:rds:eu-west-2:546933502184:db:mv-ugc-postgres",
-                        "latest_snapshot": "true",
+                        "latest_snapshot": "false",
                         "properties_to_add": "",
                         "properties_to_remove": "DBInstanceIdentifier,DBName",
-                        "snapshot_type": ""
+                        "rds_stack_name": "mv-rds-db-stack",
+                        "restore_point_in_time": "false",
+                        "restore_time": "2009-09-07T23:45:00Z",
+                        "snapshot_type": "",
+                        "target_db_instance": "no"
                     }
                 },
                 "FunctionName": {

@@ -62,6 +62,14 @@ function_role = t.add_resource(
                                         Effect=Allow,
                                         Action=[Action("rds","DescribeDBSnapshots")],
                                         Resource=["arn:aws:rds:*:*:*"]
+                                    ),Statement(
+                                        Effect=Allow,
+                                        Action=[Action("rds","DescribeDBInstances")],
+                                        Resource=["*"]
+                                    ),Statement(
+                                        Effect=Allow,
+                                        Action=[Action("rds","RestoreDBInstanceToPointInTime")],
+                                        Resource=["*"]
                                     )])
                 )],
         AssumeRolePolicyDocument=Policy(
@@ -86,16 +94,14 @@ rds_macro_lambda = t.add_resource(
             S3Key="rdsmacroinstance.zip"
         ),
         Environment=Environment(Variables={
-            'latest_snapshot': 'true',
+            'latest_snapshot': 'false',
             'properties_to_remove': 'DBInstanceIdentifier,DBName',
             'properties_to_add':'',
-            'db_instance':'arn:aws:rds:eu-west-2:546933502184:db:mv-ugc-postgres',
+            'rds_stack_name':'mv-rds-db-stack',
             'snapshot_type':'',
-            "restore":"yes",
-            "restore_time`":"2009-09-07T23:45:00Z",
-            "restore_point_in_time":"false",
-            "restore_time":"no",
-            "target_db_instance":"no"
+            'restore_time':'2009-09-07T23:45:00Z',
+            'restore_point_in_time':'false',
+            'target_db_instance':'no'
             }
         ),
         Description="Function used to manipulate the dbinstance template",
@@ -129,14 +135,20 @@ role = Role(
                                 Effect=Allow,
                                 Action = [ Action("logs", "*")],
                                 Resource = ["arn:aws:logs:*:*:*"]
+                            ),Statement(
+                                Effect=Allow,
+                                Action=[Action("rds","DescribeDBInstances")],
+                                Resource=["*"]
                             ),
                             Statement(
                                 Effect=Allow,
-                                Action=[
-                                    Action("rds","DescribeDBSnapshots")
-                                ],
+                                Action=[Action("rds","DescribeDBSnapshots")],
                                 Resource=["arn:aws:rds:*:*:*"]
-                            ),]
+                            ),Statement(
+                                Effect=Allow,
+                                Action=[Action("rds","RestoreDBInstanceToPointInTime")],
+                                Resource=["*"]
+                            )]
         ))]
     )
 

@@ -1,4 +1,5 @@
 import boto3
+from botocore.exceptions import ClientError
 import os
 import json
 
@@ -71,11 +72,12 @@ def handler(event, context):
                     p = json.loads(prop_to_add.rstrip())
                     value.update(p)
             
-    print("fragment_after_modification={0}".format(fragment))
+
 
     restore = os.environ['restore_point_in_time'].rstrip()
     restore_time = os.environ['restore_time'].rstrip()
     target_db_instance = os.environ['target_db_instance'].rstrip()
+    print("target_db_instance:{0}".format(target_db_instance))
     resp = None
 
     print("this is restor{0}".format(restore))
@@ -83,20 +85,30 @@ def handler(event, context):
         instances = client.describe_db_instances()
         print("instances {0}".format(instances))
         db_instance = parse_db_identifier(instances, rd_stack_name)
-        print("checking restoring: db_instance{0}".format(db_instance))
-        if restore.lower() == "true" and restore_time:
-            resp = client.restore_db_instance_to_point_in_time(
-                SourceDBInstanceIdentifier=db_instance,
-                RestoreTime=restore_time)
-        elif restore.lower() == "true":
-            resp = client.restore_db_instance_to_point_in_time(
-                SourceDBInstanceIdentifier=db_instance,
-                TargetDBInstanceIdentifier=target_db_instance,
-                UseLatestRestorableTime=True)
-
+        print("checking restoring: db_instance:{0}".format(db_instance))
+        try:
+            if restore.lower() == "true" and restore_time:
+                resp = client.restore_db_instance_to_point_in_time(
+                    SourceDBInstanceIdentifier=db_instance,
+                    TargetDBInstanceIdentifier=target_db_instance,
+                    RestoreTime=restore_time)
+            elif restore.lower() == "true":
+                resp = client.restore_db_instance_to_point_in_time(
+                    SourceDBInstanceIdentifier=db_instance,
+                    TargetDBInstanceIdentifier=target_db_instance,
+                    UseLatestRestorableTime=True)
+        except ClientError as e:
+            print("problems restoring = [%s]" % e)
+            
     if resp:
-      print("response_from_restore = {0}".format(resp))
-    
+        print("response_from_point_in_time_restore = {0}".format(resp))
+        dbInstanceIdentifer = {"DBInstanceIdentifier": str(resp['DBInstance']['DBInstanceIdentifier'])}
+        print("dbInstanceIdentifier: {0}".format(dbInstanceIdentifer))
+        for key, value in fragment.items():
+                if key == 'Properties':
+                    value.update(dbInstanceIdentifer)
+      
+    print("fragment_after_modification={0}".format(fragment))
     return {
         "requestId": event["requestId"],
         "status": status,

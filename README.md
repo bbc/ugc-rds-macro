@@ -2,7 +2,7 @@
 
 This is a aws cloudformation macro that is used to manipulate the template fragment of type `AWS::RDS::DBInstance`
 
-
+NOTE:  The macro does not modify the existing template but applies changes to new template which contains the construct used to invoke the maco `Fn::Transfom`. It then replaces the existing template with newly generated but with macro invoking construct `Fn::Transform` removed.
 
 ### Usage
 
@@ -25,13 +25,15 @@ for key, value in y.items():
 
 ##### Setup
 
-Below are a list of steps you should follow to setup the lambda
+Below are a list of steps you should follow to setup the lambda. After completing these steps you should then create the cloudformation stack: Refer to the section: `Cloudformation Stack`
 
 | Step                              | Action                                                       |
 | --------------------------------- | ------------------------------------------------------------ |
 | Create the bucket for the lambda. | `aws s3 mb s3://rds-snapshot-id-lambda`                      |
 | build zip file                    | `make build`                                                 |
 | Upload zip file to bucket.        | `aws s3 cp rdsmacroinstance.zip s3://rds-snapshot-id-lambda` |
+
+
 
 ##### Development
 
@@ -60,19 +62,17 @@ Below are the list of global environment variables used by the lambda
 | properties_to_remove  | a comma seperated list of items to remove.                   | BackupRetentionPeriod, DBName                                |
 | snap_shot_type        | If this value is not set not it will only fetch the manual and  automated snapshots. Refere to this:https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/rds.html#RDS.Client.describe_db_snapshots | shared                                                       |
 
-
-
 ### Cloudformation Stack
 
-To generate the cloudformation stack.
+Below are the instructions to  generate the cloudformation template which contains the macro and its associated lambda.
 
-| Step                          | Action                               |
-| ----------------------------- | ------------------------------------ |
-| Generate virtual env          | `make venv`                          |
-| Activate virutal env          | `source env/bin/activate`            |
-| generate cloudformation stack | `python infrastructure/rds_macro.py` |
+| Step                          | Action                                                |
+| ----------------------------- | ----------------------------------------------------- |
+| Generate virtual env          | `make venv`                                           |
+| Activate virutal env          | `source env/bin/activate`                             |
+| generate cloudformation stack | `python infrastructure/rds_macro.py > rds_macro.json` |
 
-
+The generated template can then be used to create the cloudformation stack.
 
 #### Connect to Database
 
@@ -99,4 +99,68 @@ Commands:
 The script `startup.sh` creates python virtual env and executes the tunnel script.
 
 **NOTE**: You will need to change the address of the db instance.
+
+##### Point In Time Restore:
+
+In order to be able to use this functionality the lambda role needs to be given permission to access the `kms` key used to encrypt and decrypt the database:
+
+Below is an example policy:
+
+```
+ {
+            "Sid": "Allow Use of Key",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::546933502184:role/ugc-rds-db-macro-FunctionRole-10ZH7C360U4QY"
+            },
+            "Action": [
+                "kms:Create*",
+                "kms:Describe*",
+                "kms:Enable*",
+                "kms:List*",
+                "kms:Put*",
+                "kms:Update*",
+                "kms:Revoke*",
+                "kms:Disable*",
+                "kms:Get*",
+                "kms:Delete*",
+                "kms:ScheduleKeyDeletion",
+                "kms:CancelKeyDeletion"
+            ],
+            "Resource": "*"
+        }
+    ]
+```
+
+
+
+#### CAVEATS:
+
+The stack used to create the db instance is rather is restrictive with regards to kms keys:
+
+It expects key name to follow a certain naming convention.
+
+Below is the code used to generate the keys:
+
+```
+def setup_kms_key(template, key_id, encrypters=[], decrypters=[], allowed_service_hostname=None, additional_policy_statement=None):
+    key_resource_name = capwords(key_id, '-').replace('-','')
+    alias_resource_name = key_resource_name + "Alias"
+    description = capwords(key_id,'-').replace('-',' ')
+    environment_parameter = template.parameters["Environment"]
+
+    kms_key = template.add_resource(Key(
+        key_resource_name,
+        Description=description,
+        Enabled=True,
+        EnableKeyRotation=True,
+        KeyPolicy=kms_key_policy(key_id, encrypters, decrypters, condition_via_service(allowed_service_hostname), additional_policy_statement)
+    ))
+    template.add_resource(Alias(
+        alias_resource_name,
+        AliasName=Join("", [ "alias/", Ref(environment_parameter), "-" + key_id ]),
+        TargetKeyId=Ref(kms_key)
+    ))
+    return kms_key
+```
 
