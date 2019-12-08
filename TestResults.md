@@ -1,5 +1,3 @@
-The following table shows the results of updating individual elements within the database template.
-
 NOTE: It takes approximately 20 minutes to create a new database using cloudformation.
 
 ### 1: Create inital database:

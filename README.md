@@ -2,7 +2,7 @@
 
 This is a aws cloudformation macro that is used to manipulate the template fragment of type `AWS::RDS::DBInstance`
 
-NOTE:  The macro does not modify the existing template but applies changes to new template which contains the construct used to invoke the maco `Fn::Transfom`. It then replaces the existing template with newly generated but with macro invoking construct `Fn::Transform` removed.
+NOTE:  The macro does not modify the existing template but applies changes to new template which contains the construct used to invoke the maco `Fn::Transfom`. It then replaces the existing template with newly generated but with the following construct `Fn::Transform` removed.
 
 ### Usage
 
@@ -133,34 +133,4 @@ Below is an example policy:
 ```
 
 
-
-#### CAVEATS:
-
-The stack used to create the db instance is rather is restrictive with regards to kms keys:
-
-It expects key name to follow a certain naming convention.
-
-Below is the code used to generate the keys:
-
-```
-def setup_kms_key(template, key_id, encrypters=[], decrypters=[], allowed_service_hostname=None, additional_policy_statement=None):
-    key_resource_name = capwords(key_id, '-').replace('-','')
-    alias_resource_name = key_resource_name + "Alias"
-    description = capwords(key_id,'-').replace('-',' ')
-    environment_parameter = template.parameters["Environment"]
-
-    kms_key = template.add_resource(Key(
-        key_resource_name,
-        Description=description,
-        Enabled=True,
-        EnableKeyRotation=True,
-        KeyPolicy=kms_key_policy(key_id, encrypters, decrypters, condition_via_service(allowed_service_hostname), additional_policy_statement)
-    ))
-    template.add_resource(Alias(
-        alias_resource_name,
-        AliasName=Join("", [ "alias/", Ref(environment_parameter), "-" + key_id ]),
-        TargetKeyId=Ref(kms_key)
-    ))
-    return kms_key
-```
 
