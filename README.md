@@ -98,5 +98,5 @@ Commands:
 
 The script `startup.sh` creates python virtual env and executes the tunnel script.
 
-NOTE: You will need to change the address of the db instance.
+**NOTE**: You will need to change the address of the db instance.
 
