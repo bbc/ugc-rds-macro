@@ -90,7 +90,7 @@ The following table shows the lambda configuration which will cause the macro to
 | properties_to_add     |                             |      |
 | properties_to_remove  | DBInstanceIdentifier,DBName |      |
 | restore_point_in_time | true                        |      |
-| restore_time          |                             |      |
+| restore_time          | 2018-07-30T23:45:00.000Z    |      |
 | snapshot_type         |                             |      |
 | target_db_instancei   | my_target_instance          |      |
 
