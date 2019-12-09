@@ -6,8 +6,8 @@ The following configuration will cause the cloudformation macro to pass the temp
 
 Lambda Configuration:
 
-|Property|Value|
-|---------------------|:----------------:|
+| Property            | Value            |
+| ------------------- | ----------------:|
 | rds_stack_name        | test-ugc-rds-stack|
 | latest_snaphot        | false             |
 | properties_to_add     |                   |
@@ -16,6 +16,12 @@ Lambda Configuration:
 | restore_time          |                   |
 | snapshot_type         |                   | 
 | target_db_instancei   | not_yet           |
+
+| Tables        | Are           | Cool  |
+| ------------- |:-------------:| -----:|
+| col 3 is      | right-aligned | $1600 |
+| col 2 is      | centered      |   $12 |
+| zebra stripes | are neat      |    $1 |
 
 ##### Outcome
 
