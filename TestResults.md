@@ -1,13 +1,14 @@
 NOTE: It takes approximately 20 minutes to create a new database using cloudformation.
 
+
 ### 1: Create inital database:
 
 The following configuration will cause the cloudformation macro to pass the template without any modification. i.e Replicate live.
 
 Lambda Configuration:
 
-| Property            | Value            |
-| ------------------- | ----------------:|
+| Property              | Value            |
+| -------------------   | ----------------:|
 | rds_stack_name        | test-ugc-rds-stack|
 | latest_snaphot        | false             |
 | properties_to_add     |                   |
@@ -17,11 +18,6 @@ Lambda Configuration:
 | snapshot_type         |                   | 
 | target_db_instancei   | not_yet           |
 
-| Tables        | Are           | Cool  |
-| ------------- |:-------------:| -----:|
-| col 3 is      | right-aligned | $1600 |
-| col 2 is      | centered      |   $12 |
-| zebra stripes | are neat      |    $1 |
 
 ##### Outcome
 
@@ -31,7 +27,7 @@ To login you will need the database username and password you used to intially c
 
 It creates a new url for connecting to the database: ie.
 
-`mv-ugc-postgres.c66kz9sr8urn.eu-west-2.rds.amazonaws.cOUTLINE1: Create inital database:Outcome**2: Restore to latest snapshot:** om`
+`mv-ugc-postgres.c66kz9sr8urn.eu-west-2.rds.amazonaws.com`
 
 ### 2: Restore to latest snapshot:
 
