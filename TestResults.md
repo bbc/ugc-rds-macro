@@ -7,7 +7,7 @@ The following configuration will cause the cloudformation macro to pass the temp
 Lambda Configuration:
 
 | Property              | Value              |      |
-| --------------------- | ------------------ | ---- |
+| --------------------- | :----------------: | ---: |
 | rds_stack_name        | test-ugc-rds-stack |      |
 | latest_snaphot        | false              |      |
 | properties_to_add     |                    |      |
