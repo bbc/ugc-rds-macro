@@ -27,6 +27,7 @@ import pycurl
 
 def login(instance, component, env):
         
+        print("--Logging in")
         cert_location = "/etc/pki/certificate.pem"
         e = io.BytesIO()
         buffer = StringIO()

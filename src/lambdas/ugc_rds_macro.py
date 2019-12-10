@@ -3,6 +3,7 @@ from botocore.exceptions import ClientError
 import os
 import json
 import uuid
+import time
 
 from io import StringIO
 client = boto3.client('rds')
@@ -130,7 +131,9 @@ def point_in_time_restore(fragment):
                 """
     if resp:
         print("response_from_point_in_time_restore = {0}".format(resp))
-        
+        print("wating 2 minutes before trying to create snaphost")
+        time.sleep(2 * 60)
+        print("finnishd waiting: creating snaphost")
         restored_snapshot_id = str(uuid.uuid4())
         res = client.create_db_snapshot(
             DBSnapshotIdentifier="a"+restored_snapshot_id,
@@ -167,12 +170,12 @@ def parse_db_identifier(response, key):
         for k,v in item.items():
            if str(k) in str('DBInstanceIdentifier'):
               db_inst_id = str(v)
-           """
-                Example of how to get the url used to connect to the database
-                if str(k) in str('Endpoint'):
-                address = v['Address']
-           """
-           if str(k) in str('DBSubnetGroup'):
+                
+            # Printing endpoint address to make things a bit easier
+           if str(k) == str('Endpoint'):
+                print("endpoint.address {0}".format(str(v['Address'])))
+          
+           if str(k) == str('DBSubnetGroup'):
                 if str(v['DBSubnetGroupName']).startswith(key):
                     db_instance_id = db_inst_id
                     db_subnet_group = v['DBSubnetGroupName']

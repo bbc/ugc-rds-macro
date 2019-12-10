@@ -8,6 +8,7 @@ import os
 import py
 import fnmatch
 import uuid
+import time
 
 _dir = os.path.dirname(os.path.realpath(__file__))
 FIXTURE_DIR = py.path.local(_dir) / 'test_files'
@@ -280,6 +281,7 @@ def test_point_in_time_restore_to_a_specific_time(s3_stub, monkeypatch, datafile
     monkeypatch.setenv('target_db_instance', "target_instance")
     test_snapshot_id = uuid.uuid4()
     mocker.patch.object(uuid, 'uuid4', return_value= test_snapshot_id)
+    mocker.patch.object(time, 'sleep')
 
     for testFile in datafiles.listdir():
             if fnmatch.fnmatch(testFile, "*db_describe_instance_response.json"):
@@ -373,6 +375,7 @@ def test_point_in_time_restore_latest_restorable_time(s3_stub, monkeypatch, data
     monkeypatch.setattr(uuid, "uuid4", test_snapshot_id)
     """
     mocker.patch.object(uuid, 'uuid4', return_value= test_snapshot_id) 
+    mocker.patch.object(time, 'sleep')
 
     for testFile in datafiles.listdir():
             if fnmatch.fnmatch(testFile, "*db_describe_instance_response.json"):
