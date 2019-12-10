@@ -1,15 +1,15 @@
 #!/bin/bash
 
-if [ ! -d "venv" ] 
+if [ ! -d "mvenv" ] 
 then
-    rm -rf venv
+    rm -rf mvenv
     python3 --version
-    python3 -m venv venv
+    python3 -m venv mvenv
     source ./venv/bin/activate 
     pip install --upgrade pip 
     pip install -r requirements.txt 
 fi
-./venv/bin/python scripts/test_db_tunnel.py int ugc-cleaner 5432 mr1qf4ez7ls7xfn.c66kz9sr8urn.eu-west-2.rds.amazonaws.com
+./mvenv/bin/python scripts/test_db_tunnel.py int ou1v70ll9f9f8sf.c66kz9sr8urn.eu-west-2.rds.amazonaws.com
 
 
 

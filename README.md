@@ -2,7 +2,7 @@
 
 This is a aws cloudformation macro that is used to manipulate the template fragment of type `AWS::RDS::DBInstance`
 
-NOTE:  The macro does not modify the existing template but applies changes to new template which contains the construct used to invoke the maco `Fn::Transfom`. It then replaces the existing template with newly generated but with the following construct `Fn::Transform` removed.
+NOTE:  The macro does not modify the existing template but applies changes to new template which contains the construct used to invoke the macro `Fn::Transfom`. It then replaces the existing template with newly generated template but with the following construct `Fn::Transform` removed.
 
 ### Usage
 

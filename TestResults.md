@@ -15,7 +15,7 @@ Lambda Configuration:
 | properties_to_remove  |                   |
 | restore_point_in_time | false             |
 | restore_time          |                   |
-| snapshot_type         |                   | 
+| snapshot_type         |                   |
 | target_db_instancei   | not_yet           |
 
 
@@ -111,7 +111,7 @@ Below are the tests which will be performed in order to validate the database re
 
    
 
-2. Restore to pointin time from a snapshot.
+2. Restore to point in time from a snapshot.
 
    1. Create db instance
    2. swith to using snapshot

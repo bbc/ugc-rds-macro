@@ -10,6 +10,10 @@
     "DBInstanceClass": {
       "Ref": "InstanceClass"
     },
+    "DBInstanceIdentifier": "target_instance",
+    "DBName": {
+      "Ref": "DatabaseName"
+    },
     "DBParameterGroupName": {
       "Ref": "ParameterGroup"
     },

@@ -70,6 +70,10 @@ function_role = t.add_resource(
                                         Effect=Allow,
                                         Action=[Action("rds","RestoreDBInstanceToPointInTime")],
                                         Resource=["*"]
+                                    ),Statement(
+                                        Effect=Allow,
+                                        Action=[Action("rds","CreateDBSnapshot")],
+                                        Resource=["*"]
                                     )])
                 )],
         AssumeRolePolicyDocument=Policy(
@@ -147,6 +151,10 @@ role = Role(
                             ),Statement(
                                 Effect=Allow,
                                 Action=[Action("rds","RestoreDBInstanceToPointInTime")],
+                                Resource=["*"]
+                            ),Statement(
+                                Effect=Allow,
+                                Action=[Action("rds","CreateDBSnapshot")],
                                 Resource=["*"]
                             )]
         ))]

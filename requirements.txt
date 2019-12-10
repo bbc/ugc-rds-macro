@@ -8,6 +8,8 @@ crhelper==2.0.3
 python-secrets==19.9.0
 troposphere==2.5.1
 pytest==5.3.1
+pytest-mock==1.13.0
+mock==3.0.5
 pytest-datafiles==2.0
 exchangelib==1.12.5
 defusedxml==0.6.0

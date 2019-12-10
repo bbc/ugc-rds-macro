@@ -4,11 +4,11 @@
     "AllocatedStorage": {
       "Ref": "AllocatedStorage"
     },
-    "BackupRetentionPeriod": {
-      "Ref": "BackupRetentionDays"
-    },
     "DBInstanceClass": {
       "Ref": "InstanceClass"
+    },
+    "DBInstanceIdentifier": {
+      "Fn::Sub": "${Environment}-ugc-postgres"
     },
     "DBParameterGroupName": {
       "Ref": "ParameterGroup"

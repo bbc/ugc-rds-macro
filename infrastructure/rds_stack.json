@@ -19,9 +19,9 @@
   },
   "Parameters": {
     "AllocatedStorage": {
-      "ConstraintDescription": "Should be between 5 and 1024Gb.",
+      "ConstraintDescription": "Should be between 5 and 1024GB.",
       "Default": "20",
-      "Description": "Allocated storage for the database (Gb).",
+      "Description": "Allocated storage for the database (GB).",
       "MaxValue": "1024",
       "MinValue": "5",
       "Type": "Number"
@@ -29,10 +29,6 @@
     "BackupRetentionDays": {
       "Default": 30,
       "Description": "Number of days to retain automated backups for",
-      "Type": "Number"
-    },
-    "CauseUpdate": {
-      "Description": "Initiate an update",
       "Type": "Number"
     },
     "DatabaseName": {
@@ -47,6 +43,7 @@
     "DatabasePassword": {
       "AllowedPattern": "[a-zA-Z0-9]*",
       "ConstraintDescription": "Should contain only alphanumeric characters.",
+      "Default": "letmeinplease",
       "Description": "The database admin account password.",
       "MaxLength": "41",
       "MinLength": "1",
@@ -72,8 +69,12 @@
         "int",
         "test",
         "live",
-        "dv",
-        "mv"
+        "one",
+        "two",
+        "three",
+        "four",
+        "five",
+        "six"
       ],
       "Description": "The name of the environment.",
       "Type": "String"
@@ -110,7 +111,42 @@
       },
       "Type": "AWS::RDS::DBParameterGroup"
     },
-    "RdsPostGresDatabase": {
+    "SubnetGroup": {
+      "Properties": {
+        "DBSubnetGroupDescription": "Subnets available for the RDS DB instance",
+        "SubnetIds": [
+          {
+            "Fn::ImportValue": "core-infrastructure-PrivateSubnet0"
+          },
+          {
+            "Fn::ImportValue": "core-infrastructure-PrivateSubnet1"
+          }
+        ]
+      },
+      "Type": "AWS::RDS::DBSubnetGroup"
+    },
+    "UGCDNSRecord": {
+      "Properties": {
+        "HostedZoneName": {
+          "Ref": "DomainNameBase"
+        },
+        "Name": {
+          "Fn::Sub": "ugc-postgres.${Environment}.${DomainNameBase}"
+        },
+        "ResourceRecords": [
+          {
+            "Fn::GetAtt": [
+              "UGCDatabase",
+              "Endpoint.Address"
+            ]
+          }
+        ],
+        "TTL": "300",
+        "Type": "CNAME"
+      },
+      "Type": "AWS::Route53::RecordSet"
+    },
+    "UGCDatabase": {
       "Properties": {
         "AllocatedStorage": {
           "Ref": "AllocatedStorage"
@@ -152,14 +188,6 @@
         },
         "PubliclyAccessible": "false",
         "StorageEncrypted": "true",
-        "Tags": [
-          {
-            "Key": "Name",
-            "Value": {
-              "Ref": "CauseUpdate"
-            }
-          }
-        ],
         "VPCSecurityGroups": [
           {
             "Ref": "VPCSecurityGroup"
@@ -170,41 +198,6 @@
       "Fn::Transform": {
         "Name": "UgcRdsMacro"
       }
-    },
-    "SubnetGroup": {
-      "Properties": {
-        "DBSubnetGroupDescription": "Subnets available for the RDS DB instance",
-        "SubnetIds": [
-          {
-            "Fn::ImportValue": "core-infrastructure-PrivateSubnet0"
-          },
-          {
-            "Fn::ImportValue": "core-infrastructure-PrivateSubnet1"
-          }
-        ]
-      },
-      "Type": "AWS::RDS::DBSubnetGroup"
-    },
-    "UGCDNSRecord": {
-      "Properties": {
-        "HostedZoneName": {
-          "Ref": "DomainNameBase"
-        },
-        "Name": {
-          "Fn::Sub": "ugc-postgres.${Environment}.${DomainNameBase}"
-        },
-        "ResourceRecords": [
-          {
-            "Fn::GetAtt": [
-              "RdsPostGresDatabase",
-              "Endpoint.Address"
-            ]
-          }
-        ],
-        "TTL": "300",
-        "Type": "CNAME"
-      },
-      "Type": "AWS::Route53::RecordSet"
     },
     "UgcPostgresPasswordsKey": {
       "Properties": {
