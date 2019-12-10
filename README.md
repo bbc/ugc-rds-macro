@@ -131,5 +131,5 @@ Below is an example policy:
         }
 ```
 
-
+In order to use this new instance you will need to take a snapshot of the instance and then update the stack with this new snaphost id. 
 
