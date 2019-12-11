@@ -3,7 +3,7 @@ from pytest_mock import mocker
 from botocore.stub import Stubber
 import json
 import datetime
-from lambdas.ugc_rds_macro import handler, client, parse_db_identifier
+from lambdas.ugc_rds_macro import handler, client, parse_db_identifier, get_ugc_database_template, cf_client
 import os
 import py
 import fnmatch
@@ -147,7 +147,7 @@ def test_handler_add_multiple_properties(monkeypatch, datafiles):
     FIXTURE_DIR / 'db_instance_template_with_snapshot_specified.json',
     FIXTURE_DIR / 'db_describe_instance_response.json'
 )
-def test_snapshot_identifer(s3_stub, monkeypatch, datafiles):
+def test_snapshot_identifer(rds_stub, monkeypatch, datafiles):
     
     monkeypatch.setenv("properties_to_remove", "BackupRetentionPeriod")
     monkeypatch.setenv("latest_snapshot", "true")
@@ -163,14 +163,14 @@ def test_snapshot_identifer(s3_stub, monkeypatch, datafiles):
             if fnmatch.fnmatch(testFile, "*db_describe_instance_response.json"):
                 desc_db_inst_response = json.loads(testFile.read_text(encoding="'utf-8'"))
         
-    s3_stub.add_response(
+    rds_stub.add_response(
             'describe_db_instances',
             service_response=desc_db_inst_response
     )
     
     response = {'DBSnapshots': [{'DBSnapshotIdentifier': 'rds:mv-ugc-postgres-2019-12-06-11-10', 'DBInstanceIdentifier': 'mv-ugc-postgres', 'SnapshotCreateTime': datetime.datetime(2019, 12, 6, 11, 10, 33, 790000), 'Engine': 'postgres', 'AllocatedStorage': 20, 'Status': 'available', 'Port': 5432, 'AvailabilityZone': 'eu-west-2b', 'VpcId': 'vpc-19483f70', 'InstanceCreateTime': datetime.datetime(2019, 12, 6, 11, 9, 28, 424000), 'MasterUsername': 'ugc', 'EngineVersion': '9.6.15', 'LicenseModel': 'postgresql-license', 'SnapshotType': 'automated', 'OptionGroupName': 'default:postgres-9-6', 'PercentProgress': 100, 'StorageType': 'standard',
                                  'Encrypted': True, 'KmsKeyId': 'arn:aws:kms:eu-west-2:546933502184:key/83f283d1-7b58-4827-854c-db776149795f', 'DBSnapshotArn': 'arn:aws:rds:eu-west-2:546933502184:snapshot:rds:mv-ugc-postgres-2019-12-06-11-10', 'IAMDatabaseAuthenticationEnabled': False, 'ProcessorFeatures': [], 'DbiResourceId': 'db-CQ76MXOJJIFBOQ7WT63Y6AXUKA'}], 'ResponseMetadata': {'RequestId': '8290e734-5717-4c94-9ed5-1eaf0aa20ec6', 'HTTPStatusCode': 200, 'HTTPHeaders': {'x-amzn-requestid': '8290e734-5717-4c94-9ed5-1eaf0aa20ec6', 'content-type': 'text/xml', 'content-length': '1687', 'date': 'Fri, 06 Dec 2019 15:02:09 GMT'}, 'RetryAttempts': 0}}
-    s3_stub.add_response(
+    rds_stub.add_response(
         'describe_db_snapshots',
         expected_params={'DBInstanceIdentifier': 'mr1qf4ez7ls7xfn'},
         service_response=response
@@ -194,7 +194,7 @@ def test_snapshot_identifer(s3_stub, monkeypatch, datafiles):
     FIXTURE_DIR / 'db_instance_template_with_snapshot_specified.json',
     FIXTURE_DIR / 'db_describe_instance_response.json'
 )
-def test_snapshot_identifer_with_snapshot_type(s3_stub, monkeypatch, datafiles):
+def test_snapshot_identifer_with_snapshot_type(rds_stub, monkeypatch, datafiles):
 
     monkeypatch.setenv("properties_to_remove", "")
     monkeypatch.setenv("latest_snapshot", "true")
@@ -210,14 +210,14 @@ def test_snapshot_identifer_with_snapshot_type(s3_stub, monkeypatch, datafiles):
             if fnmatch.fnmatch(testFile, "*db_describe_instance_response.json"):
                 desc_db_inst_response = json.loads(testFile.read_text(encoding="'utf-8'"))
         
-    s3_stub.add_response(
+    rds_stub.add_response(
             'describe_db_instances',
             service_response=desc_db_inst_response
     )
 
     response = {'DBSnapshots': [{'DBSnapshotIdentifier': 'rds:mv-ugc-postgres-2019-12-06-11-10', 'DBInstanceIdentifier': 'mv-ugc-postgres', 'SnapshotCreateTime': datetime.datetime(2019, 12, 6, 11, 10, 33, 790000), 'Engine': 'postgres', 'AllocatedStorage': 20, 'Status': 'available', 'Port': 5432, 'AvailabilityZone': 'eu-west-2b', 'VpcId': 'vpc-19483f70', 'InstanceCreateTime': datetime.datetime(2019, 12, 6, 11, 9, 28, 424000), 'MasterUsername': 'ugc', 'EngineVersion': '9.6.15', 'LicenseModel': 'postgresql-license', 'SnapshotType': 'automated', 'OptionGroupName': 'default:postgres-9-6', 'PercentProgress': 100, 'StorageType': 'standard',
                                  'Encrypted': True, 'KmsKeyId': 'arn:aws:kms:eu-west-2:546933502184:key/83f283d1-7b58-4827-854c-db776149795f', 'DBSnapshotArn': 'arn:aws:rds:eu-west-2:546933502184:snapshot:rds:mv-ugc-postgres-2019-12-06-11-10', 'IAMDatabaseAuthenticationEnabled': False, 'ProcessorFeatures': [], 'DbiResourceId': 'db-CQ76MXOJJIFBOQ7WT63Y6AXUKA'}], 'ResponseMetadata': {'RequestId': '8290e734-5717-4c94-9ed5-1eaf0aa20ec6', 'HTTPStatusCode': 200, 'HTTPHeaders': {'x-amzn-requestid': '8290e734-5717-4c94-9ed5-1eaf0aa20ec6', 'content-type': 'text/xml', 'content-length': '1687', 'date': 'Fri, 06 Dec 2019 15:02:09 GMT'}, 'RetryAttempts': 0}}
-    s3_stub.add_response(
+    rds_stub.add_response(
         'describe_db_snapshots',
         expected_params={'DBInstanceIdentifier': 'mr1qf4ez7ls7xfn',
                          'SnapshotType': 'shared'},
@@ -241,7 +241,7 @@ def test_snapshot_identifer_with_snapshot_type(s3_stub, monkeypatch, datafiles):
     FIXTURE_DIR / 'db_instance_template_with_supplied_snapshot_identifier.json',
     FIXTURE_DIR / 'db_describe_instance_response.json'
 )
-def test_snapshot_with_supplied_identifier(s3_stub, monkeypatch, datafiles):
+def test_snapshot_with_supplied_identifier(rds_stub, monkeypatch, datafiles):
     
     monkeypatch.setenv("properties_to_remove", "")
     monkeypatch.setenv("latest_snapshot", "true")
@@ -270,7 +270,7 @@ def test_snapshot_with_supplied_identifier(s3_stub, monkeypatch, datafiles):
     FIXTURE_DIR / 'db_restore_to_point_in_time.json',
     FIXTURE_DIR / 'db_describe_instance_response.json'
 )
-def test_point_in_time_restore_to_a_specific_time(s3_stub, monkeypatch, datafiles, mocker):
+def test_point_in_time_restore_to_a_specific_time(rds_stub, monkeypatch, datafiles, mocker):
     monkeypatch.setenv("properties_to_remove", "")
     monkeypatch.setenv("latest_snapshot", "false")
     monkeypatch.setenv("properties_to_add", "")
@@ -287,7 +287,7 @@ def test_point_in_time_restore_to_a_specific_time(s3_stub, monkeypatch, datafile
             if fnmatch.fnmatch(testFile, "*db_describe_instance_response.json"):
                 desc_db_inst_response = json.loads(testFile.read_text(encoding="'utf-8'"))
         
-    s3_stub.add_response(
+    rds_stub.add_response(
             'describe_db_instances',
             service_response=desc_db_inst_response
     )
@@ -300,7 +300,7 @@ def test_point_in_time_restore_to_a_specific_time(s3_stub, monkeypatch, datafile
             "DBInstanceIdentifier": "restored-test-instance"
         }
     }
-    s3_stub.add_response(
+    rds_stub.add_response(
         'restore_db_instance_to_point_in_time',
         expected_params={'SourceDBInstanceIdentifier':'mr1qf4ez7ls7xfn',
                 'RestoreTime': '2018-07-30T23:45:00.000Z',
@@ -334,7 +334,7 @@ def test_point_in_time_restore_to_a_specific_time(s3_stub, monkeypatch, datafile
             "DbiResourceId": "db-PSC7UU72SDEX7TDNFIKJNUCOVA"
         }
     }
-    s3_stub.add_response(
+    rds_stub.add_response(
         'create_db_snapshot',
      #   expected_params={'DBSnapshotIdentifier':'*',
      #           'DBInstanceIdentifier':'target_instance'},
@@ -360,7 +360,7 @@ def test_point_in_time_restore_to_a_specific_time(s3_stub, monkeypatch, datafile
     FIXTURE_DIR / 'db_restore_to_point_in_time.json',
     FIXTURE_DIR / 'db_describe_instance_response.json'
 )
-def test_point_in_time_restore_latest_restorable_time(s3_stub, monkeypatch, datafiles, mocker):
+def test_point_in_time_restore_latest_restorable_time(rds_stub, monkeypatch, datafiles, mocker):
     monkeypatch.setenv("properties_to_remove", "")
     monkeypatch.setenv("latest_snapshot", "false")
     monkeypatch.setenv("properties_to_add", "")
@@ -381,7 +381,7 @@ def test_point_in_time_restore_latest_restorable_time(s3_stub, monkeypatch, data
             if fnmatch.fnmatch(testFile, "*db_describe_instance_response.json"):
                 desc_db_inst_response = json.loads(testFile.read_text(encoding="'utf-8'"))
         
-    s3_stub.add_response(
+    rds_stub.add_response(
             'describe_db_instances',
             service_response=desc_db_inst_response
     )
@@ -394,7 +394,7 @@ def test_point_in_time_restore_latest_restorable_time(s3_stub, monkeypatch, data
             "DBInstanceIdentifier": "restored-test-instance"
         }
     }
-    s3_stub.add_response(
+    rds_stub.add_response(
         'restore_db_instance_to_point_in_time',
         expected_params={'SourceDBInstanceIdentifier':'mr1qf4ez7ls7xfn',
                 'TargetDBInstanceIdentifier':'target_instance',
@@ -428,7 +428,7 @@ def test_point_in_time_restore_latest_restorable_time(s3_stub, monkeypatch, data
             "DbiResourceId": "db-PSC7UU72SDEX7TDNFIKJNUCOVA"
         }
     }
-    s3_stub.add_response(
+    rds_stub.add_response(
         'create_db_snapshot',
      #   expected_params={'DBSnapshotIdentifier':'*',
      #           'DBInstanceIdentifier':'target_instance'},
@@ -456,7 +456,7 @@ def test_point_in_time_restore_latest_restorable_time(s3_stub, monkeypatch, data
     FIXTURE_DIR / 'db_restore_to_point_in_time_db_already_exist.json',
     FIXTURE_DIR / 'db_describe_instance_response.json'
 )
-def test_point_in_time_restore_fails(s3_stub, monkeypatch, datafiles):
+def test_point_in_time_restore_fails(rds_stub, monkeypatch, datafiles):
     monkeypatch.setenv("properties_to_remove", "")
     monkeypatch.setenv("latest_snapshot", "false")
     monkeypatch.setenv("properties_to_add", "")
@@ -470,7 +470,7 @@ def test_point_in_time_restore_fails(s3_stub, monkeypatch, datafiles):
             if fnmatch.fnmatch(testFile, "*db_describe_instance_response.json"):
                 desc_db_inst_response = json.loads(testFile.read_text(encoding="'utf-8'"))
         
-    s3_stub.add_response(
+    rds_stub.add_response(
             'describe_db_instances',
             service_response=desc_db_inst_response
     )
@@ -483,7 +483,7 @@ def test_point_in_time_restore_fails(s3_stub, monkeypatch, datafiles):
             "DBInstanceIdentifier": "restored-test-instance"
         }
     }
-    s3_stub.add_client_error(
+    rds_stub.add_client_error(
         'restore_db_instance_to_point_in_time',
         service_error_code='DBInstanceAlreadyExists',
         expected_params={'SourceDBInstanceIdentifier':'mr1qf4ez7ls7xfn',
@@ -510,13 +510,35 @@ def test_find_db_indentifier_using_stack_name(datafiles):
 
         for testFile in datafiles.listdir():
             if fnmatch.fnmatch(testFile, "*db_describe_instance_response.json"):
-                response = json.loads(testFile.read_text(encoding="'utf-8'"))
+                response = json.loads(testFile.read_text(encoding="utf-8"))
         
         db_instance_id = parse_db_identifier(response,'mv-rds-db-stack')
         assert db_instance_id == "mr1qf4ez7ls7xfn"
 """ 
-        s3_stub.add_response(
+        rds_stub.add_response(
             'describe_db_instances',
             service_response=response
         ) """
-       
+
+@pytest.mark.skip(reason="getting some wierd validation errors")       
+@pytest.mark.datafiles(
+    FIXTURE_DIR / 'cloudformation_get_template_response.json',
+    FIXTURE_DIR / 'ugc_database_stack_template.json'
+)
+def test_get_ugc_database_template(monkeypatch, cloudformation_stub, datafiles):
+
+    monkeypatch.setenv("rds_stack_name", "mv-rds-db-stack")
+    (response, db_instance_template) = _read_test_data(datafiles,
+                                                       "cloudformation_get_template_response.json",
+                                                       "ugc_database_stack_template.json")
+    cloudformation_stub.add_response(
+        'get_template',
+      #  expected_params={'StackName': stack_name,
+      #          'TemplateStage':'Processed'},
+        service_response=response
+    )
+
+    template = get_ugc_database_template()
+
+    assert db_instance_template == template  
+

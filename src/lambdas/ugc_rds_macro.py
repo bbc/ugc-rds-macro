@@ -4,9 +4,27 @@ import os
 import json
 import uuid
 import time
-
 from io import StringIO
+
 client = boto3.client('rds')
+cf_client = boto3.client('cloudformation')
+
+def get_ugc_database_template():
+
+    rds_stack_name = os.environ['rds_stack_name'].rstrip()
+
+    print("this stack name {0}".format(rds_stack_name))
+    try:
+        response = cf_client.get_template(
+            StackName= rds_stack_name,
+            TemplateStage='Processed'
+        )
+    except ClientError as e:
+        print("error occure getting template [{0}]".format(str(e)))
+
+    print("response from get_ugc_database_template [{0}]".format(json.dumps(response)))
+    print("ugc_database {0}".format(json.dumps(response['TemplateBody']['Resources']['UGCDatabase'])))
+    return json.dumps(response['TemplateBody']['Resources']['UGCDatabase'])
 
 def update_snapshot(fragment):
 
@@ -121,6 +139,9 @@ def point_in_time_restore(fragment):
                         UseLatestRestorableTime=True)
             except ClientError as e:
                 print("problems restoring = [%s]" % e)
+                t = get_ugc_database_template()
+                print("this is the template{0}".format(t))
+                return json.loads(t)
                 """
                 if "DBInstanceAlreadyExists" in str(e):
                     dbInstanceIdentifer = {"DBInstanceIdentifier": target_db_instance}
@@ -145,16 +166,20 @@ def point_in_time_restore(fragment):
                 if key == 'Properties':
                     value.update(db_snapshot_id)
 
+    return fragment
+        
+
 def handler(event, context):
     print('this is the event = {}'.format(event))
     fragment = event["fragment"]
     status = "success"
     print('fragment_before_modification={0}'.format(fragment))
 
+    get_ugc_database_template()
     update_snapshot(fragment)
     remove_properties(fragment)
     add_properties(fragment)
-    point_in_time_restore(fragment)        
+    fragment = point_in_time_restore(fragment)        
   
     print("fragment_after_modification={0}".format(fragment))
     return {
