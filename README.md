@@ -43,11 +43,7 @@ After making code changes run the following command to create a new zip, upload 
 
 ##### Testing
 
-`NOTE`: Currently all tests are failing because of an issue with the stubber provided by boto3. The following issue as been raised: https://github.com/boto/botocore/issues/1911
-
-If no response then another approach for mocking aws needs to be used.
-
-To run the test.. from within the `src` directory type:
+`NOTE`: All tests that invoke operations that use `get_template` cloudformation api have been skipped because of an issue with the stubber provided by boto3. The following issue as been raised: https://github.com/boto/botocore/issues/1911
 
 `python -m pytest`
 
