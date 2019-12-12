@@ -13,7 +13,8 @@ client = boto3.client('rds')
 cf_client = boto3.client('cloudformation')
 lambda_client = boto3.client('lambda')
 lambda_arn = None
-ignore_get_template = True
+# This is support the issue with boto3 stubber not working for get_template
+do_not_ignore_get_template = True
 def __add_snapshot_identifier(fragment, snapshot_id):
     for key, value in fragment.items():
         if key == 'Properties':
@@ -29,8 +30,8 @@ def check_if_snapshot_identifier_needs_be_added(fragment):
         __add_snapshot_identifier(fragment, snapshot_id)
 
 def get_ugc_database_template():
-    
-    if ignore_get_template:
+
+    if do_not_ignore_get_template:
         rds_stack_name = os.environ['rds_stack_name'].rstrip()
         print("this stack name {0}".format(rds_stack_name))
         try:
