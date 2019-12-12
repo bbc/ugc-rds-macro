@@ -74,6 +74,10 @@ function_role = t.add_resource(
                                         Effect=Allow,
                                         Action=[Action("rds","CreateDBSnapshot")],
                                         Resource=["*"]
+                                    ),Statement(
+                                        Effect=Allow,
+                                        Action=[Action("cloudformation","GetTemplate")],
+                                        Resource=["*"]
                                     )])
                 )],
         AssumeRolePolicyDocument=Policy(

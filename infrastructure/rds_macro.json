@@ -118,6 +118,15 @@
                                     "Resource": [
                                         "*"
                                     ]
+                                },
+                                {
+                                    "Action": [
+                                        "cloudformation:GetTemplate"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": [
+                                        "*"
+                                    ]
                                 }
                             ]
                         },

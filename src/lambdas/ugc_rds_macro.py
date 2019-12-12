@@ -9,22 +9,50 @@ from io import StringIO
 client = boto3.client('rds')
 cf_client = boto3.client('cloudformation')
 
+def __add_snapshot_identifier(fragment, snapshot_id):
+    for key, value in fragment.items():
+        if key == 'Properties':
+            db_snapshot_id = {'DBSnapshotIdentifier': snapshot_id} 
+            value.update(db_snapshot_id)
+
+def check_if_snapshot_identifier_needs_be_added(fragment):
+
+    snapshot_id = get_snapshot_identifier(get_ugc_database_template())
+    if snapshot_id != None and get_snapshot_identifier(fragment) == None:
+        __remove_property(fragment,"DBInstanceIdentifier")
+        __remove_property(fragment,"DBName")
+        __add_snapshot_identifier(fragment, snapshot_id)
+
 def get_ugc_database_template():
 
     rds_stack_name = os.environ['rds_stack_name'].rstrip()
-
     print("this stack name {0}".format(rds_stack_name))
     try:
         response = cf_client.get_template(
             StackName= rds_stack_name,
             TemplateStage='Processed'
         )
+        print("response from get_ugc_database_template [{0}]".format(json.dumps(response)))
+        print("ugc_database {0}".format(json.dumps(response['TemplateBody']['Resources']['UGCDatabase'])))
+        return json.dumps(response['TemplateBody']['Resources']['UGCDatabase'])
     except ClientError as e:
         print("error occure getting template [{0}]".format(str(e)))
 
-    print("response from get_ugc_database_template [{0}]".format(json.dumps(response)))
-    print("ugc_database {0}".format(json.dumps(response['TemplateBody']['Resources']['UGCDatabase'])))
-    return json.dumps(response['TemplateBody']['Resources']['UGCDatabase'])
+    return None
+
+
+def get_snapshot_identifier(dbinstance_template):
+
+    db = dbinstance_template
+    if type(dbinstance_template) is str:
+        db  = json.loads(dbinstance_template)
+    
+    try:
+        snapshot_id = db["Properties"]["DBSnapshotIdentifier"]
+    except KeyError:
+        return None
+
+    return snapshot_id
 
 def update_snapshot(fragment):
 
@@ -32,9 +60,7 @@ def update_snapshot(fragment):
     rds_stack_name = os.environ['rds_stack_name'].rstrip().lower()
     print("rds_stack_name [{0}]".format(rds_stack_name))
     latest_snapshot = os.environ.get('latest_snapshot').rstrip().lower()
-    print("type'{0}'".format(type(latest_snapshot)))
     print('latest_snapshot {0}'.format(latest_snapshot))
-    print('latest_snapshot_evalutation {0}'.format(latest_snapshot))
     if latest_snapshot == "true":
         snapshot_id = os.environ.get("snapshot_id").rstrip()
 
@@ -42,10 +68,7 @@ def update_snapshot(fragment):
         __remove_property(fragment,"DBName")
 
         if snapshot_id:
-            for key, value in fragment.items():
-                if key == 'Properties':
-                    db_snapshot_id = {'DBSnapshotIdentifier': snapshot_id} 
-                    value.update(db_snapshot_id)
+            __add_snapshot_identifier(fragment, snapshot_id)
 
         elif rds_stack_name:
             snapshot_type = os.environ['snapshot_type'].rstrip()
@@ -68,11 +91,8 @@ def update_snapshot(fragment):
                 all_snap_shots = snapshots['DBSnapshots']
                 if len(all_snap_shots) > 0:
                     snap_shot_id = all_snap_shots[0]['DBSnapshotArn']
-    
-                    for key, value in fragment.items():
-                        if key == 'Properties':
-                            db_snapshot_id = {'DBSnapshotIdentifier': snap_shot_id} 
-                            value.update(db_snapshot_id)
+                    __add_snapshot_identifier(fragment, snap_shot_id)
+
                 else:
                     for key, value in fragment.items():
                         if key == 'Properties':
@@ -161,10 +181,7 @@ def point_in_time_restore(fragment):
             DBInstanceIdentifier=str(resp['DBInstance']['DBInstanceIdentifier']))
         __remove_property(fragment,"DBInstanceIdentifier")
         __remove_property(fragment,"DBName")
-        db_snapshot_id = {'DBSnapshotIdentifier': "b"+restored_snapshot_id}
-        for key, value in fragment.items():
-                if key == 'Properties':
-                    value.update(db_snapshot_id)
+        __add_snapshot_identifier(fragment, restored_snapshot_id)
 
     return fragment
         
@@ -179,7 +196,8 @@ def handler(event, context):
     update_snapshot(fragment)
     remove_properties(fragment)
     add_properties(fragment)
-    fragment = point_in_time_restore(fragment)        
+    fragment = point_in_time_restore(fragment)   
+    check_if_snapshot_identifier_needs_be_added(fragment)     
   
     print("fragment_after_modification={0}".format(fragment))
     return {
@@ -197,8 +215,8 @@ def parse_db_identifier(response, key):
               db_inst_id = str(v)
                 
             # Printing endpoint address to make things a bit easier
-           if str(k) == str('Endpoint'):
-                print("endpoint.address {0}".format(str(v['Address'])))
+            #if str(k) == str('Endpoint'):
+            #     print("endpoint.address {0}".format(str(v['Address'])))
           
            if str(k) == str('DBSubnetGroup'):
                 if str(v['DBSubnetGroupName']).startswith(key):
