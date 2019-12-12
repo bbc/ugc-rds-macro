@@ -2,7 +2,7 @@ import pytest
 from botocore.stub import Stubber
 import botocore.session
 import datetime
-from lambdas.ugc_rds_macro import client, cf_client
+from lambdas.ugc_rds_macro import client, cf_client, lambda_client
 import os
 import py
 
@@ -16,6 +16,13 @@ def rds_stub():
 @pytest.yield_fixture(autouse=True)
 def cloudformation_stub():
     with Stubber(cf_client) as stubber:
+        stubber.activate()
+        yield stubber
+        stubber.assert_no_pending_responses()
+
+@pytest.yield_fixture(autouse=True)
+def lambda_stub():
+    with Stubber(lambda_client) as stubber:
         stubber.activate()
         yield stubber
         stubber.assert_no_pending_responses()

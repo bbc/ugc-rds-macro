@@ -1,14 +1,18 @@
+import json
+import os
+import sys
+import time
+import uuid
+import traceback
+from io import StringIO
+
 import boto3
 from botocore.exceptions import ClientError
-import os
-import json
-import uuid
-import time
-from io import StringIO
 
 client = boto3.client('rds')
 cf_client = boto3.client('cloudformation')
-
+lambda_client = boto3.client('lambda')
+lambda_arn = None
 def __add_snapshot_identifier(fragment, snapshot_id):
     for key, value in fragment.items():
         if key == 'Properties':
@@ -36,7 +40,7 @@ def get_ugc_database_template():
         print("ugc_database {0}".format(json.dumps(response['TemplateBody']['Resources']['UGCDatabase'])))
         return json.dumps(response['TemplateBody']['Resources']['UGCDatabase'])
     except ClientError as e:
-        print("error occure getting template [{0}]".format(str(e)))
+        print("error getting template [{0}]".format(str(e)))
 
     return None
 
@@ -105,7 +109,6 @@ def add_properties(fragment):
     props_to_add = properties_to_add.split(",")
     if properties_to_add.rstrip():
         for prop_to_add in props_to_add:
-            print("props to sadd {0}".format(prop_to_add))
             for key, value in fragment.items():
                 if key == 'Properties':
                     p = json.loads(prop_to_add.rstrip())
@@ -114,8 +117,7 @@ def add_properties(fragment):
 def remove_properties(fragment):
     # Remving properties
     properties_to_remove = os.environ['properties_to_remove']
-    print("to remove {0}".format(properties_to_remove))
-
+   
     props_to_remove = properties_to_remove.split(",")
     if properties_to_remove.rstrip():
         for prop_to_remove in props_to_remove:
@@ -123,13 +125,32 @@ def remove_properties(fragment):
 
    
 def __remove_property(fragment, prop):
-    print("frag = {0} prop = {1}".format(fragment, prop))
     try:
         for key, value in fragment.items():
             if key == 'Properties':
                 del value[prop.strip()]
     except KeyError:
         print("key does not exist `{}`".format(prop))
+
+def get_instance_state(instance_id):
+
+    try:
+        instances = client.describe_db_instances(DBInstanceIdentifier = instance_id)
+        return instances['DBInstances'][0]['DBInstanceStatus']
+    except ClientError as e:
+        print("error calling describe_db_instances for {0}={1}]".format(instance_id, str(e)))
+        return None
+        
+def check_for_tag(tag):
+    tags = lambda_client.list_tags(Resource=lambda_arn)
+    for k,v in tags['Tags'].items():
+        if k == "ugc:point-in-time:dbinstance:"+tag:
+            return v
+    
+    return None
+
+def add_tag(key, value):
+    lambda_client.tag_resource(Resource=lambda_arn, Tags={"ugc:point-in-time:dbinstance:"+tag: value})
 
 def point_in_time_restore(fragment):
     # Restoring to point in time
@@ -145,22 +166,24 @@ def point_in_time_restore(fragment):
         instances = client.describe_db_instances()
         db_instance = parse_db_identifier(instances, rds_stack_name)
         
-        if db_instance:
+        state = get_instance_state(target_db_instance)
+
+        if db_instance and state == None:
             try:
                 if restore.lower() == "true" and restore_time:
                     resp = client.restore_db_instance_to_point_in_time(
-                        SourceDBInstanceIdentifier=db_instance,
-                        TargetDBInstanceIdentifier=target_db_instance,
+                        SourceDBInstanceIdentifier = db_instance,
+                        TargetDBInstanceIdentifier = target_db_instance,
                         RestoreTime=restore_time)
                 elif restore.lower() == "true":
                     resp = client.restore_db_instance_to_point_in_time(
-                        SourceDBInstanceIdentifier=db_instance,
-                        TargetDBInstanceIdentifier=target_db_instance,
-                        UseLatestRestorableTime=True)
+                        SourceDBInstanceIdentifier = db_instance,
+                        TargetDBInstanceIdentifier = target_db_instance,
+                        UseLatestRestorableTime = True)
             except ClientError as e:
-                print("problems restoring = [%s]" % e)
+                print("problems creating point in time restore = [%s]" % e)
                 t = get_ugc_database_template()
-                print("this is the template{0}".format(t))
+                print("deployed template{0}".format(t))
                 return json.loads(t)
                 """
                 if "DBInstanceAlreadyExists" in str(e):
@@ -170,35 +193,56 @@ def point_in_time_restore(fragment):
                         if key == 'Properties':
                             value.update(dbInstanceIdentifer)
                 """
-    if resp:
-        print("response_from_point_in_time_restore = {0}".format(resp))
-        print("wating 2 minutes before trying to create snaphost")
-        time.sleep(2 * 60)
-        print("finnishd waiting: creating snaphost")
-        restored_snapshot_id = str(uuid.uuid4())
-        res = client.create_db_snapshot(
-            DBSnapshotIdentifier="a"+restored_snapshot_id,
-            DBInstanceIdentifier=str(resp['DBInstance']['DBInstanceIdentifier']))
-        __remove_property(fragment,"DBInstanceIdentifier")
-        __remove_property(fragment,"DBName")
-        __add_snapshot_identifier(fragment, restored_snapshot_id)
+            
+            add_tag(target_db_instance, "creating")
+
+            if resp:
+                print("response_from_point_in_time_restore = {0}".format(resp))
+                t = get_ugc_database_template()
+                print("deployed template{0}".format(t))
+                return json.loads(t)
+
+        
+        elif db_instance and state is 'creating':
+            print("point in time restore has not finnished creating yet:{0}".format(target_db_instance))
+            t = get_ugc_database_template()
+            print("deployed template{0}".format(t))
+            return json.loads(t)
+
+        elif db_instance and state is 'available':
+            restored_snapshot_id = "a"+str(uuid.uuid4())
+            res = client.create_db_snapshot(
+                    DBSnapshotIdentifier = restored_snapshot_id,
+                    DBInstanceIdentifier = target_db_instance)
+            print("resp from create_snapshot_of_point_in_time={0}".format(str(res)))
+            __remove_property(fragment, "DBInstanceIdentifier")
+            __remove_property(fragment, "DBName")
+            __add_snapshot_identifier(fragment, restored_snapshot_id)
 
     return fragment
         
 
 def handler(event, context):
+    lambda_arn = context.invoked_function_arn
+    print("lambda_arn{0}".format(lambda_arn))
     print('this is the event = {}'.format(event))
     fragment = event["fragment"]
     status = "success"
     print('fragment_before_modification={0}'.format(fragment))
 
-    get_ugc_database_template()
-    update_snapshot(fragment)
-    remove_properties(fragment)
-    add_properties(fragment)
-    fragment = point_in_time_restore(fragment)   
-    check_if_snapshot_identifier_needs_be_added(fragment)     
-  
+    try:
+        get_ugc_database_template()
+        update_snapshot(fragment)
+        remove_properties(fragment)
+        add_properties(fragment)
+        fragment = point_in_time_restore(fragment)   
+        check_if_snapshot_identifier_needs_be_added(fragment)     
+    except:
+        traceback.format_exc()
+        e = sys.exc_info()[0]
+        print("something went wrong:{0}".format(str(e)))
+        fragment = json.loads(get_ugc_database_template())
+        
     print("fragment_after_modification={0}".format(fragment))
     return {
         "requestId": event["requestId"],

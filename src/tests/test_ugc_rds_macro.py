@@ -1,9 +1,10 @@
 import pytest
+import lambdas.ugc_rds_macro
 from pytest_mock import mocker
 from botocore.stub import Stubber
 import json
 import datetime
-from lambdas.ugc_rds_macro import handler, parse_db_identifier, get_ugc_database_template, get_snapshot_identifier
+from lambdas.ugc_rds_macro import handler, parse_db_identifier, get_ugc_database_template, get_snapshot_identifier, check_for_tag, get_instance_state
 import os
 import py
 import fnmatch
@@ -14,381 +15,7 @@ from io import StringIO
 _dir = os.path.dirname(os.path.realpath(__file__))
 FIXTURE_DIR = py.path.local(_dir) / 'test_files'
 
-
-template_response = {
-  "TemplateBody": {
-      "Outputs": {
-          "RDSEncryptionKeyArn": {
-              "Description": "The arn of the database encryption key",
-              "Export": {
-                  "Name": {
-                      "Fn::Sub": "${Environment}-RDSEncryptionKeyArn"
-                  }
-              },
-              "Value": {
-                  "Fn::GetAtt": [
-                      "UgcRdsEncryptionKey",
-                      "Arn"
-                  ]
-              }
-          }
-      },
-      "AWSTemplateFormatVersion": "2010-09-09",
-      "Description": "Create UGC RDS instances",
-      "Parameters": {
-          "AllocatedStorage": {
-              "ConstraintDescription": "Should be between 5 and 1024GB.",
-              "Default": "20",
-              "Description": "Allocated storage for the database (GB).",
-              "MaxValue": "1024",
-              "MinValue": "5",
-              "Type": "Number"
-          },
-          "BackupRetentionDays": {
-              "Default": 30,
-              "Description": "Number of days to retain automated backups for",
-              "Type": "Number"
-          },
-          "DatabaseName": {
-              "AllowedPattern": "[a-zA-Z][a-zA-Z0-9]*",
-              "ConstraintDescription": "Should begin with a letter and contain only alphanumeric characters.",
-              "Default": "ugc",
-              "Description": "The name of the database to create.",
-              "MaxLength": "64",
-              "MinLength": "1",
-              "Type": "String"
-          },
-          "DatabasePassword": {
-              "AllowedPattern": "[a-zA-Z0-9]*",
-              "ConstraintDescription": "Should contain only alphanumeric characters.",
-              "Default": "letmeinplease",
-              "Description": "The database admin account password.",
-              "MaxLength": "41",
-              "MinLength": "1",
-              "NoEcho": True,
-              "Type": "String"
-          },
-          "DatabaseUser": {
-              "AllowedPattern": "[a-zA-Z][a-zA-Z0-9]*",
-              "ConstraintDescription": "Should begin with a letter and contain only alphanumeric characters.",
-              "Default": "ugc",
-              "Description": "The database admin account username.",
-              "MaxLength": "16",
-              "MinLength": "1",
-              "Type": "String"
-          },
-          "DomainNameBase": {
-              "Default": "c7dff5ab13c48206.xhst.bbci.co.uk.",
-              "Description": "Base domain under which to create DNS records",
-              "Type": "String"
-          },
-          "Environment": {
-              "AllowedValues": [
-                  "int",
-                  "test",
-                  "live",
-                  "one",
-                  "two",
-                  "three",
-                  "four",
-                  "five",
-                  "six"
-              ],
-              "Description": "The name of the environment.",
-              "Type": "String"
-          },
-          "InstanceClass": {
-              "AllowedValues": [
-                  "db.t2.small",
-                  "db.t2.medium",
-                  "db.t2.large"
-              ],
-              "ConstraintDescription": "The database instance type to use.",
-              "Default": "db.t2.small",
-              "Description": "Database instance class.",
-              "Type": "String"
-          },
-          "MultiAZ": {
-              "AllowedValues": [
-                  "true",
-                  "false"
-              ],
-              "Default": "false",
-              "Description": "Replicate across multiple AZs?",
-              "Type": "String"
-          }
-      },
-      "Resources": {
-          "UGCDNSRecord": {
-              "Properties": {
-                  "HostedZoneName": {
-                      "Ref": "DomainNameBase"
-                  },
-                  "Name": {
-                      "Fn::Sub": "ugc-postgres.${Environment}.${DomainNameBase}"
-                  },
-                  "ResourceRecords": [
-                      {
-                          "Fn::GetAtt": [
-                              "UGCDatabase",
-                              "Endpoint.Address"
-                          ]
-                      }
-                  ],
-                  "TTL": "300",
-                  "Type": "CNAME"
-              },
-              "Type": "AWS::Route53::RecordSet"
-          },
-          "UGCDatabase": {
-              "Type": "AWS::RDS::DBInstance",
-              "Properties": {
-                  "AllocatedStorage": {
-                      "Ref": "AllocatedStorage"
-                  },
-                  "BackupRetentionPeriod": {
-                      "Ref": "BackupRetentionDays"
-                  },
-                  "DBInstanceClass": {
-                      "Ref": "InstanceClass"
-                  },
-                  "DBParameterGroupName": {
-                      "Ref": "ParameterGroup"
-                  },
-                  "DBSubnetGroupName": {
-                      "Ref": "SubnetGroup"
-                  },
-                  "Engine": "postgres",
-                  "EngineVersion": "9.6",
-                  "KmsKeyId": {
-                      "Fn::GetAtt": [
-                          "UgcRdsEncryptionKey",
-                          "Arn"
-                      ]
-                  },
-                  "MasterUserPassword": {
-                      "Ref": "DatabasePassword"
-                  },
-                  "MasterUsername": {
-                      "Ref": "DatabaseUser"
-                  },
-                  "MultiAZ": {
-                      "Ref": "MultiAZ"
-                  },
-                  "PubliclyAccessible": "false",
-                  "StorageEncrypted": "true",
-                  "VPCSecurityGroups": [
-                      {
-                          "Ref": "VPCSecurityGroup"
-                      }
-                  ],
-                  "DBSnapshotIdentifier": "arn:aws:rds:eu-west-2:546933502184:snapshot:rds:test-ugc-postgres-2019-12-03-02-13"
-              }
-          },
-          "VPCSecurityGroup": {
-              "Properties": {
-                  "GroupDescription": "Security group for RDS DB instance.",
-                  "SecurityGroupIngress": [
-                      {
-                          "FromPort": 5432,
-                          "IpProtocol": "tcp",
-                          "SourceSecurityGroupId": {
-                              "Fn::ImportValue": {
-                                  "Fn::Sub": "int-ManagerSecurityGroup"
-                              }
-                          },
-                          "ToPort": 5432
-                      },
-                      {
-                          "FromPort": 5432,
-                          "IpProtocol": "tcp",
-                          "SourceSecurityGroupId": {
-                              "Fn::ImportValue": {
-                                  "Fn::Sub": "int-InputHandlerSecurityGroup"
-                              }
-                          },
-                          "ToPort": 5432
-                      },
-                      {
-                          "FromPort": 5432,
-                          "IpProtocol": "tcp",
-                          "SourceSecurityGroupId": {
-                              "Fn::ImportValue": {
-                                  "Fn::Sub": "int-CleanerSecurityGroup"
-                              }
-                          },
-                          "ToPort": 5432
-                      }
-                  ],
-                  "VpcId": {
-                      "Fn::ImportValue": "core-infrastructure-VpcId"
-                  }
-              },
-              "Type": "AWS::EC2::SecurityGroup"
-          },
-          "ParameterGroup": {
-              "Properties": {
-                  "Description": "Parameters for the RDS DB",
-                  "Family": "postgres9.6",
-                  "Parameters": {
-                      "rds.force_ssl": "1"
-                  }
-              },
-              "Type": "AWS::RDS::DBParameterGroup"
-          },
-          "UgcRdsEncryptionKey": {
-              "Properties": {
-                  "Description": "Ugc Rds Encryption Key",
-                  "EnableKeyRotation": "true",
-                  "Enabled": "true",
-                  "KeyPolicy": {
-                      "Id": "ugc-rds-encryption-key-policy",
-                      "Statement": [
-                          {
-                              "Action": [
-                                  "kms:*"
-                              ],
-                              "Effect": "Allow",
-                              "Principal": {
-                                  "AWS": {
-                                      "Ref": "AWS::AccountId"
-                                  }
-                              },
-                              "Resource": [
-                                  "*"
-                              ],
-                              "Sid": "Administer key via root"
-                          }
-                      ],
-                      "Version": "2012-10-17"
-                  }
-              },
-              "Type": "AWS::KMS::Key"
-          },
-          "UgcPostgresPasswordsKey": {
-              "Properties": {
-                  "Description": "Ugc Postgres Passwords Key",
-                  "EnableKeyRotation": "true",
-                  "Enabled": "true",
-                  "KeyPolicy": {
-                      "Id": "ugc-postgres-passwords-key-policy",
-                      "Statement": [
-                          {
-                              "Action": [
-                                  "kms:*"
-                              ],
-                              "Effect": "Allow",
-                              "Principal": {
-                                  "AWS": {
-                                      "Ref": "AWS::AccountId"
-                                  }
-                              },
-                              "Resource": [
-                                  "*"
-                              ],
-                              "Sid": "Administer key via root"
-                          },
-                          {
-                              "Action": [
-                                  "kms:Decrypt"
-                              ],
-                              "Condition": {
-                                  "StringEquals": {
-                                      "kms:ViaService": "ssm.eu-west-2.amazonaws.com"
-                                  }
-                              },
-                              "Effect": "Allow",
-                              "Principal": {
-                                  "AWS": [
-                                      {
-                                          "Fn::ImportValue": {
-                                              "Fn::Sub": "int-InputHandlerRole"
-                                          }
-                                      },
-                                      {
-                                          "Fn::ImportValue": {
-                                              "Fn::Sub": "int-ManagerComponentRole"
-                                          }
-                                      },
-                                      {
-                                          "Fn::ImportValue": {
-                                              "Fn::Sub": "int-CleanerComponentRole"
-                                          }
-                                      }
-                                  ]
-                              },
-                              "Resource": [
-                                  "*"
-                              ],
-                              "Sid": "Allow decryption"
-                          }
-                      ],
-                      "Version": "2012-10-17"
-                  }
-              },
-              "Type": "AWS::KMS::Key"
-          },
-          "UgcRdsEncryptionKeyAlias": {
-              "Properties": {
-                  "AliasName": {
-                      "Fn::Join": [
-                          "",
-                          [
-                              "alias/",
-                              {
-                                  "Ref": "Environment"
-                              },
-                              "-ugc-rds-encryption-key"
-                          ]
-                      ]
-                  },
-                  "TargetKeyId": {
-                      "Ref": "UgcRdsEncryptionKey"
-                  }
-              },
-              "Type": "AWS::KMS::Alias"
-          },
-          "SubnetGroup": {
-              "Properties": {
-                  "DBSubnetGroupDescription": "Subnets available for the RDS DB instance",
-                  "SubnetIds": [
-                      {
-                          "Fn::ImportValue": "core-infrastructure-PrivateSubnet0"
-                      },
-                      {
-                          "Fn::ImportValue": "core-infrastructure-PrivateSubnet1"
-                      }
-                  ]
-              },
-              "Type": "AWS::RDS::DBSubnetGroup"
-          },
-          "UgcPostgresPasswordsKeyAlias": {
-              "Properties": {
-                  "AliasName": {
-                      "Fn::Join": [
-                          "",
-                          [
-                              "alias/",
-                              {
-                                  "Ref": "Environment"
-                              },
-                              "-ugc-postgres-passwords-key"
-                          ]
-                      ]
-                  },
-                  "TargetKeyId": {
-                      "Ref": "UgcPostgresPasswordsKey"
-                  }
-              },
-              "Type": "AWS::KMS::Alias"
-          }
-      }
-  },
-  "StagesAvailable": [
-      "Original",
-      "Processed"
-  ]
-}
+lambda_arn = 'arn:aws:lambda:eu-west-2:546933502184:function:int-ugc-rds-macro'
 
 def _read_test_data(datafiles, expected_file, orig_template):
     for testFile in datafiles.listdir():
@@ -918,23 +545,102 @@ def test_get_snapshot_identier(datafiles):
     assert res == "arn:aws:rds:eu-west-2:546933502184:snapshot:rds:mv-ugc-postgres-2019-12-06-11-10"
 
 @pytest.mark.datafiles(
+    FIXTURE_DIR / 'cloudformation_get_template_response.json',
     FIXTURE_DIR / 'ugc_database_stack_template.json'
 )
 def test_get_ugc_database_template(monkeypatch, cloudformation_stub, datafiles):
 
     monkeypatch.setenv("rds_stack_name", "mv-rds-db-stack")
-    #(response, db_instance_template) = _read_test_data(datafiles,
-    #                                                   "cloudformation_get_template_response.json",
-    #                                                   "ugc_database_stack_template.json")
+    (response, db_instance_template) = _read_test_data(datafiles,
+                                                       "cloudformation_get_template_response.json",
+                                                       "ugc_database_stack_template.json")
     
-    io = StringIO()
-    json.dump(template_response, io)
     cloudformation_stub.add_response(
         'get_template',
-        service_response=template_response
+        service_response=response
     )
 
     template = get_ugc_database_template()
 
     assert db_instance_template == template  
+
+
+def test_check_for_tag(lambda_stub):
+
+    arn = 'arn:aws:lambda:eu-west-2:546933502184:function:int-ugc-rds-macro'    
+    lambdas.ugc_rds_macro.lambda_arn = arn
+    
+    tags = {
+        "Tags": {
+            "aws:cloudformation:logical-id": "RdsSnapShotLambdaFunction",
+            "aws:cloudformation:stack-id": "arn:aws:cloudformation:eu-west-2:546933502184:stack/ugc-rds-db-macro/ef020480-19c5-11ea-9f4f-0617023ccf6e",
+            "ugc:point-in-time:dbinstance:instanceid": "ugc-rds-db-macro"
+            }
+        }
+    lambda_stub.add_response(
+        'list_tags',
+        expected_params={'Resource': arn},
+        service_response = tags
+    )
+
+    value = check_for_tag('instanceid')
+    
+    assert value == "ugc-rds-db-macro"
+
+def test_check_for_tag_not_exist(lambda_stub):
+
+    arn = 'arn:aws:lambda:eu-west-2:546933502184:function:int-ugc-rds-macro'    
+    lambdas.ugc_rds_macro.lambda_arn = arn
+    
+    tags = {
+        "Tags": {
+            "aws:cloudformation:logical-id": "RdsSnapShotLambdaFunction",
+            "aws:cloudformation:stack-id": "arn:aws:cloudformation:eu-west-2:546933502184:stack/ugc-rds-db-macro/ef020480-19c5-11ea-9f4f-0617023ccf6e",
+            "aws:cloudformation:stack-name": "ugc-rds-db-macro"
+            }
+        }
+
+    lambda_stub.add_response(
+        'list_tags',
+        expected_params={'Resource': arn},
+        service_response = tags
+    )
+
+    value = check_for_tag('not_exist')
+    
+    assert value == None
+
+@pytest.mark.datafiles(
+    FIXTURE_DIR / 'db_describe_single_instance.json'
+)
+def test_get_instance_state(rds_stub, datafiles):
+    instance_id = 'instance_id'
+    for testFile in datafiles.listdir():
+        if fnmatch.fnmatch(testFile, "*db_describe_single_instance.json"):
+            response = json.loads(testFile.read_text(encoding="utf-8"))
+
+    rds_stub.add_response(
+        'describe_db_instances',
+        expected_params={'DBInstanceIdentifier': instance_id},
+        service_response = response
+
+    )
+
+    state = get_instance_state(instance_id)
+    assert state == 'available'
+
+def test_get_instance_state_when_instance_not_found(rds_stub, datafiles):
+    instance_id = 'instance_id'
+    for testFile in datafiles.listdir():
+        if fnmatch.fnmatch(testFile, "*db_describe_single_instance.json"):
+            response = json.loads(testFile.read_text(encoding="utf-8"))
+
+    rds_stub.add_client_error(
+        'describe_db_instances',
+        service_error_code='DBInstanceADBInstanceNotFound',
+        expected_params={'DBInstanceIdentifier': instance_id}
+    )
+
+    state = get_instance_state(instance_id)
+    assert state == None
 
