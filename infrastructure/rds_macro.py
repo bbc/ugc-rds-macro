@@ -114,14 +114,14 @@ rds_macro_lambda = t.add_resource(
             S3Key="rdsmacroinstance.zip"
         ),
         Environment=Environment(Variables={
-            'log_level': 'info'
-            'rds_stack_name':'mv-rds-db-stack',
-            'latest_snapshot': 'false',
+            'log_level': 'info',
+            'rds_snapshot_stack_name':'mv-rds-db-stack',
+            'replace_snapshot': 'false',
             'snapshot_type':'',
-            'restore_time':'2009-09-07T23:45:00Z',
+            'snapshot_id': '',
+            'restore_time':'2019-09-07T23:45:00Z',
             'restore_point_in_time':'false',
-            'target_db_instance':'no',
-            'properties_to_remove': 'DBInstanceIdentifier,DBName',
+            'properties_to_remove': '',
             'properties_to_add':'',
             }
         ),

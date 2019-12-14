@@ -15,7 +15,7 @@
             "AllocatedStorage": 20,
             "InstanceCreateTime": "2019-12-05T09:39:33.015Z",
             "PreferredBackupWindow": "02:23-02:53",
-            "BackupRetentionPeriod": 30,
+            "BackupRetentionPeriod": 100,
             "DBSecurityGroups": [],
             "VpcSecurityGroups": [
                 {
