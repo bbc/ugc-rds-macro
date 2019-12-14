@@ -96,8 +96,10 @@ def get_snapshot_identifier(dbinstance_template):
 def update_snapshot(fragment, stack_of_interest):
     func_name = traceback.extract_stack(None, 2)[0][2]
     # Fetching latest snapshot
-    rds_snapshot_stack_name = os.environ[' rds_snapshot_stack_name'].rstrip().lower()
-    replace_with_snapshot = os.environ.get('replace_with_snapshot').rstrip().lower()
+    rds_snapshot_stack_name = os.environ['rds_snapshot_stack_name'].rstrip(
+    ).lower()
+    replace_with_snapshot = os.environ.get(
+        'replace_with_snapshot').rstrip().lower()
     if replace_with_snapshot == "true":
         snapshot_id = os.environ.get("snapshot_id").rstrip()
 
@@ -108,8 +110,9 @@ def update_snapshot(fragment, stack_of_interest):
             _add_snapshot_identifier(fragment, snapshot_id)
             logger.info(":{0}:adding snapshot {1}".format(
                 func_name, snapshot_id))
-        elif  rds_snapshot_stack_name:
-            _create_snapshot_using_stack_name( rds_snapshot_stack_name, fragment)
+        elif rds_snapshot_stack_name:
+            _create_snapshot_using_stack_name(
+                rds_snapshot_stack_name, fragment)
         else:
             _create_snapshot_using_stack_name(stack_of_interest, fragment)
 
@@ -128,7 +131,7 @@ def _create_snapshot_using_stack_name(stackname, fragment):
                 raise Exception("SUPPLIED SNAP SHOT TYPE NOT VALID")
 
             snapshots = client.describe_db_snapshots(
-                    DBInstanceIdentifier=db_instance, SnapshotType=snapshot_type)
+                DBInstanceIdentifier=db_instance, SnapshotType=snapshot_type)
         else:
             snapshots = client.describe_db_snapshots(
                 DBInstanceIdentifier=db_instance)
@@ -214,7 +217,8 @@ def get_tagged_db_instance():
 def point_in_time_restore(fragment, stack_of_interest):
     # Restoring to point in time
     func_name = traceback.extract_stack(None, 2)[0][2]
-    replace_with_snapshot = os.environ.get('replace_with_snapshot').rstrip().lower()
+    replace_with_snapshot = os.environ.get(
+        'replace_with_snapshot').rstrip().lower()
     restore = os.environ['restore_point_in_time'].rstrip()
     restore_time = os.environ['restore_time'].rstrip()
     resp = None
@@ -301,7 +305,7 @@ def handler(event, context):
     except ValueError as ve:
         print("Logger level is not  valid {0}".format(str(ve)))
         do_not_skip_processing = False
-        
+
     #lambda_arn = context.invoked_function_arn
     func_name = traceback.extract_stack(None, 2)[0][2]
     logger.debug(':{0}:this is the event = {1}'.format(func_name, event))
@@ -323,7 +327,7 @@ def handler(event, context):
             remove_properties(fragment)
             add_properties(fragment)
             fragment = point_in_time_restore(fragment, stack_of_interest)
-        
+
         snapshot_id = check_if_snapshot_identifier_needs_be_added(
             fragment, stack_of_interest)
     except:

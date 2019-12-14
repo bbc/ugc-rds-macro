@@ -294,6 +294,7 @@ def test_snapshot_identifer_with_snapshot_type(rds_stub, monkeypatch, datafiles)
     assert res['requestId'] == "my_request_id"
     assert res['fragment'] == expected
 
+
 @pytest.mark.datafiles(
     FIXTURE_DIR / 'db_instance_template.json',
     FIXTURE_DIR / 'db_describe_instance_response.json'
@@ -321,6 +322,7 @@ def test_snapshot_identifer_with_invalid_snapshot_type(rds_stub, monkeypatch, da
     res = handler(f, test_context)
     assert res['requestId'] == "my_request_id"
     assert res['fragment'] == expected
+
 
 @pytest.mark.datafiles(
     FIXTURE_DIR / 'db_instance_template.json',
@@ -396,11 +398,10 @@ def test_point_in_time_create_snap_shot(mocker, monkeypatch, lambda_stub, rds_st
         }
     }
 
-
     rds_stub.add_response(
         'create_db_snapshot',
-          expected_params={'DBSnapshotIdentifier': "rsi{0}".format(str(test_snapshot_id)),
-               'DBInstanceIdentifier': target_db_instance_id},
+        expected_params={'DBSnapshotIdentifier': "rsi{0}".format(str(test_snapshot_id)),
+                         'DBInstanceIdentifier': target_db_instance_id},
         service_response=create_db_response
     )
     list_tag_response = {
@@ -750,6 +751,7 @@ def test_get_instance_state_when_instance_not_found(datafiles):
     state = get_instance_state(instance_id, instances)
     assert state == None
 
+
 @pytest.mark.datafiles(
     FIXTURE_DIR / 'db_instance_template.json'
 )
@@ -881,4 +883,3 @@ def test_get_back_retention_period(datafiles):
             response = json.loads(testFile.read_text(encoding="utf-8"))
 
     assert 100 == get_back_retention_period(response, "dv-ugc-postgres")
-
