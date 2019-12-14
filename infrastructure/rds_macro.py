@@ -116,7 +116,7 @@ rds_macro_lambda = t.add_resource(
         Environment=Environment(Variables={
             'log_level': 'info',
             'rds_snapshot_stack_name':'mv-rds-db-stack',
-            'replace_snapshot': 'false',
+            'replace_with_snapshot': 'false',
             'snapshot_type':'',
             'snapshot_id': '',
             'restore_time':'2019-09-07T23:45:00Z',
