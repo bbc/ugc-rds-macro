@@ -196,7 +196,12 @@
       },
       "Type": "AWS::RDS::DBInstance",
       "Fn::Transform": {
-        "Name": "UgcRdsMacro"
+        "Name": "UgcRdsMacro",
+        "Parameters": {
+          "stackname": {
+            "Ref": "AWS::StackName"
+          }
+        }
       }
     },
     "UgcPostgresPasswordsKey": {

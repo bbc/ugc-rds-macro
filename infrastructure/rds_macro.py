@@ -78,6 +78,18 @@ function_role = t.add_resource(
                                         Effect=Allow,
                                         Action=[Action("cloudformation","GetTemplate")],
                                         Resource=["*"]
+                                    ),Statement(
+                                        Effect=Allow,
+                                        Action=[Action("lambda","TagResource")],
+                                        Resource=["*"]
+                                    ),Statement(
+                                        Effect=Allow,
+                                        Action=[Action("lambda","UntagResource")],
+                                        Resource=["*"]
+                                    ),Statement(
+                                        Effect=Allow,
+                                        Action=[Action("lambda","ListTags")],
+                                        Resource=["*"]
                                     )])
                 )],
         AssumeRolePolicyDocument=Policy(
@@ -102,14 +114,15 @@ rds_macro_lambda = t.add_resource(
             S3Key="rdsmacroinstance.zip"
         ),
         Environment=Environment(Variables={
-            'latest_snapshot': 'false',
-            'properties_to_remove': 'DBInstanceIdentifier,DBName',
-            'properties_to_add':'',
+            'log_level': 'info'
             'rds_stack_name':'mv-rds-db-stack',
+            'latest_snapshot': 'false',
             'snapshot_type':'',
             'restore_time':'2009-09-07T23:45:00Z',
             'restore_point_in_time':'false',
-            'target_db_instance':'no'
+            'target_db_instance':'no',
+            'properties_to_remove': 'DBInstanceIdentifier,DBName',
+            'properties_to_add':'',
             }
         ),
         Description="Function used to manipulate the dbinstance template",

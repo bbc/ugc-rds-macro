@@ -127,6 +127,24 @@
                                     "Resource": [
                                         "*"
                                     ]
+                                },
+                                {
+                                    "Action": [
+                                        "lambda:TagResource"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": [
+                                        "*"
+                                    ]
+                                },
+                                {
+                                    "Action": [
+                                        "lambda:UntagResource"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": [
+                                        "*"
+                                    ]
                                 }
                             ]
                         },
@@ -224,6 +242,7 @@
                 "Environment": {
                     "Variables": {
                         "latest_snapshot": "false",
+                        "log_level": "info",
                         "properties_to_add": "",
                         "properties_to_remove": "DBInstanceIdentifier,DBName",
                         "rds_stack_name": "mv-rds-db-stack",

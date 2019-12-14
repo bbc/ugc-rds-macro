@@ -26,3 +26,7 @@ def lambda_stub():
         stubber.activate()
         yield stubber
         stubber.assert_no_pending_responses()
+
+@pytest.yield_fixture(autouse=True)
+def setup_env():
+    os.environ['log_level'] = 'DEBUG'
