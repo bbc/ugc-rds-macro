@@ -97,8 +97,8 @@ def update_snapshot(fragment, stack_of_interest):
     func_name = traceback.extract_stack(None, 2)[0][2]
     # Fetching latest snapshot
     rds_snapshot_stack_name = os.environ[' rds_snapshot_stack_name'].rstrip().lower()
-    replace_snapshot = os.environ.get('replace_snapshot').rstrip().lower()
-    if replace_snapshot == "true":
+    replace_with_snapshot = os.environ.get('replace_with_snapshot').rstrip().lower()
+    if replace_with_snapshot == "true":
         snapshot_id = os.environ.get("snapshot_id").rstrip()
 
         _remove_property(fragment, "DBInstanceIdentifier")
@@ -214,12 +214,12 @@ def get_tagged_db_instance():
 def point_in_time_restore(fragment, stack_of_interest):
     # Restoring to point in time
     func_name = traceback.extract_stack(None, 2)[0][2]
-    replace_snapshot = os.environ.get('replace_snapshot').rstrip().lower()
+    replace_with_snapshot = os.environ.get('replace_with_snapshot').rstrip().lower()
     restore = os.environ['restore_point_in_time'].rstrip()
     restore_time = os.environ['restore_time'].rstrip()
     resp = None
 
-    if restore and replace_snapshot != "true":
+    if restore and replace_with_snapshot != "true":
         instances = client.describe_db_instances()
         db_instance = parse_db_identifier(instances, stack_of_interest)
         target_db_instance = get_tagged_db_instance()

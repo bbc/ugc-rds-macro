@@ -117,7 +117,7 @@ def test_handler_remove_property(monkeypatch, datafiles):
                                                        "db_instance_template_with_backup_retention_property_removed.json",
                                                        "db_instance_template.json")
 
-    monkeypatch.setenv("replace_snapshot", "False")
+    monkeypatch.setenv("replace_with_snapshot", "False")
     monkeypatch.setenv("snapshot_id", "")
     monkeypatch.setenv("properties_to_remove", "BackupRetentionPeriod")
     monkeypatch.setenv("properties_to_add", "")
@@ -141,7 +141,7 @@ def test_handler_remove_property(monkeypatch, datafiles):
 )
 def test_handler_remove_multiple_properties(monkeypatch, datafiles):
 
-    monkeypatch.setenv("replace_snapshot", "False")
+    monkeypatch.setenv("replace_with_snapshot", "False")
     monkeypatch.setenv("snapshot_id", "")
     monkeypatch.setenv("properties_to_remove", "DBInstanceIdentifier, DBName")
     monkeypatch.setenv("properties_to_add", "")
@@ -169,7 +169,7 @@ def test_handler_remove_multiple_properties(monkeypatch, datafiles):
 )
 def test_handler_add_property(monkeypatch, datafiles):
     monkeypatch.setenv("properties_to_remove", "")
-    monkeypatch.setenv("replace_snapshot", "False")
+    monkeypatch.setenv("replace_with_snapshot", "False")
     monkeypatch.setenv("snapshot_id", "")
     monkeypatch.setenv(
         "properties_to_add", '{"BackupRetentionPeriod": {"Ref": "BackupRetentionDays"}}')
@@ -196,7 +196,7 @@ def test_handler_add_property(monkeypatch, datafiles):
 )
 def test_handler_add_multiple_properties(monkeypatch, datafiles):
     monkeypatch.setenv("properties_to_remove", "")
-    monkeypatch.setenv("replace_snapshot", "false")
+    monkeypatch.setenv("replace_with_snapshot", "false")
     monkeypatch.setenv("snapshot_id", "")
     monkeypatch.setenv(
         "properties_to_add", '{"BackupRetentionPeriod": {"Ref": "BackupRetentionDays"}},{"DBName": { "Ref": "DatabaseName"}}')
@@ -225,7 +225,7 @@ def test_handler_add_multiple_properties(monkeypatch, datafiles):
 def test_snapshot_identifer(rds_stub, monkeypatch, datafiles):
 
     monkeypatch.setenv("properties_to_remove", "BackupRetentionPeriod")
-    monkeypatch.setenv("replace_snapshot", "true")
+    monkeypatch.setenv("replace_with_snapshot", "true")
     monkeypatch.setenv("snapshot_id", "")
     monkeypatch.setenv("properties_to_add", "")
     monkeypatch.setenv(" rds_snapshot_stack_name", "mv-rds-db-stack")
@@ -264,7 +264,7 @@ def test_snapshot_identifer(rds_stub, monkeypatch, datafiles):
 def test_snapshot_identifer_with_snapshot_type(rds_stub, monkeypatch, datafiles):
 
     monkeypatch.setenv("properties_to_remove", "")
-    monkeypatch.setenv("replace_snapshot", "true")
+    monkeypatch.setenv("replace_with_snapshot", "true")
     monkeypatch.setenv("snapshot_id", "")
     monkeypatch.setenv("properties_to_add", "")
     monkeypatch.setenv(" rds_snapshot_stack_name", "mv-rds-db-stack")
@@ -301,7 +301,7 @@ def test_snapshot_identifer_with_snapshot_type(rds_stub, monkeypatch, datafiles)
 def test_snapshot_identifer_with_invalid_snapshot_type(rds_stub, monkeypatch, datafiles):
 
     monkeypatch.setenv("properties_to_remove", "")
-    monkeypatch.setenv("replace_snapshot", "true")
+    monkeypatch.setenv("replace_with_snapshot", "true")
     monkeypatch.setenv("snapshot_id", "")
     monkeypatch.setenv("properties_to_add", "")
     monkeypatch.setenv(" rds_snapshot_stack_name", "mv-rds-db-stack")
@@ -330,7 +330,7 @@ def test_snapshot_identifer_with_invalid_snapshot_type(rds_stub, monkeypatch, da
 def test_snapshot_with_supplied_identifier(rds_stub, monkeypatch, datafiles):
 
     monkeypatch.setenv("properties_to_remove", "")
-    monkeypatch.setenv("replace_snapshot", "true")
+    monkeypatch.setenv("replace_with_snapshot", "true")
     monkeypatch.setenv("snapshot_id", "snaphost_id")
     monkeypatch.setenv("properties_to_add", "")
     monkeypatch.setenv(" rds_snapshot_stack_name", "mv-rds-db-stack")
@@ -357,7 +357,7 @@ def test_snapshot_with_supplied_identifier(rds_stub, monkeypatch, datafiles):
 )
 def test_point_in_time_create_snap_shot(mocker, monkeypatch, lambda_stub, rds_stub, datafiles):
     monkeypatch.setenv("properties_to_remove", "")
-    monkeypatch.setenv("replace_snapshot", "false")
+    monkeypatch.setenv("replace_with_snapshot", "false")
     monkeypatch.setenv("properties_to_add", "")
     monkeypatch.setenv(" rds_snapshot_stack_name", "mv-rds-db-stack")
     monkeypatch.setenv("snapshot_type", "shared")
@@ -446,7 +446,7 @@ def test_point_in_time_create_snap_shot(mocker, monkeypatch, lambda_stub, rds_st
 )
 def test_point_in_time_restore_to_a_specific_time(rds_stub, lambda_stub, monkeypatch, datafiles, mocker):
     monkeypatch.setenv("properties_to_remove", "")
-    monkeypatch.setenv("replace_snapshot", "false")
+    monkeypatch.setenv("replace_with_snapshot", "false")
     monkeypatch.setenv("properties_to_add", "")
     monkeypatch.setenv(" rds_snapshot_stack_name", "mv-rds-db-stack")
     monkeypatch.setenv("snapshot_type", "shared")
@@ -497,7 +497,7 @@ def test_point_in_time_restore_to_a_specific_time(rds_stub, lambda_stub, monkeyp
 )
 def test_point_in_time_restore_using_invalid_time(rds_stub, lambda_stub, monkeypatch, datafiles, mocker):
     monkeypatch.setenv("properties_to_remove", "")
-    monkeypatch.setenv("replace_snapshot", "false")
+    monkeypatch.setenv("replace_with_snapshot", "false")
     monkeypatch.setenv("properties_to_add", "")
     monkeypatch.setenv(" rds_snapshot_stack_name", "mv-rds-db-stack")
     monkeypatch.setenv("snapshot_type", "shared")
@@ -529,7 +529,7 @@ def test_point_in_time_restore_using_invalid_time(rds_stub, lambda_stub, monkeyp
 )
 def test_point_in_time_restore_latest_restorable_time(rds_stub, lambda_stub, cloudformation_stub, monkeypatch, datafiles, mocker):
     monkeypatch.setenv("properties_to_remove", "")
-    monkeypatch.setenv("replace_snapshot", "false")
+    monkeypatch.setenv("replace_with_snapshot", "false")
     monkeypatch.setenv("properties_to_add", "")
     monkeypatch.setenv(" rds_snapshot_stack_name", "mv-rds-db-stack")
     monkeypatch.setenv("snapshot_type", "shared")
@@ -581,7 +581,7 @@ def test_point_in_time_restore_latest_restorable_time(rds_stub, lambda_stub, clo
 )
 def test_point_in_time_restore_when_instance_is_being_created(rds_stub, lambda_stub, cloudformation_stub, monkeypatch, datafiles, mocker):
     monkeypatch.setenv("properties_to_remove", "")
-    monkeypatch.setenv("replace_snapshot", "false")
+    monkeypatch.setenv("replace_with_snapshot", "false")
     monkeypatch.setenv("properties_to_add", "")
     monkeypatch.setenv(" rds_snapshot_stack_name", "mv-rds-db-stack")
     monkeypatch.setenv("snapshot_type", "shared")
@@ -627,7 +627,7 @@ def test_point_in_time_restore_when_instance_is_being_created(rds_stub, lambda_s
 )
 def test_point_in_time_restore_when_instance_is_being_modified(rds_stub, lambda_stub, cloudformation_stub, monkeypatch, datafiles, mocker):
     monkeypatch.setenv("properties_to_remove", "")
-    monkeypatch.setenv("replace_snapshot", "false")
+    monkeypatch.setenv("replace_with_snapshot", "false")
     monkeypatch.setenv("properties_to_add", "")
     monkeypatch.setenv(" rds_snapshot_stack_name", "mv-rds-db-stack")
     monkeypatch.setenv("snapshot_type", "shared")
@@ -755,7 +755,7 @@ def test_get_instance_state_when_instance_not_found(datafiles):
 )
 def test_invalid_log_level(monkeypatch, datafiles):
     monkeypatch.setenv("properties_to_remove", "")
-    monkeypatch.setenv("replace_snapshot", "false")
+    monkeypatch.setenv("replace_with_snapshot", "false")
     monkeypatch.setenv("properties_to_add", "")
     monkeypatch.setenv(" rds_snapshot_stack_name", "mv-rds-db-stack")
     monkeypatch.setenv("snapshot_type", "shared")
