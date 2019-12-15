@@ -105,14 +105,41 @@ The script `startup.sh` creates python virtual env and executes the tunnel scrip
 
 In order to be able to use this functionality the lambda role needs to be given permission to access the `kms` key used to encrypt and decrypt the database:
 
+The aliases for database encryption keys use the following naming convention: 
+
+**{environment}-ugc-postgres-passwords-key** where the *environment* is the parameter that is specified within the database stack.
+
+[key_policy.json](scripts/key_policy.json)
+
+With the folder scripts the script add_key_policy.sh can be used to perform this task.
+
+| File                     | Description | Usage |
+| ------------------------ | ----------- | ----- |
+| [scripts]key_policy.json | This conti  |       |
+|                          |             |       |
+|                          |             |       |
+
 Below is an example policy:
 
 ```
- {
+{
+    "Version": "2012-10-17",
+    "Id": "ugc-rds-encryption-key-policy",
+    "Statement": [
+        {
+            "Sid": "Administer key via root",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::546933502184:root"
+            },
+            "Action": "kms:*",
+            "Resource": "*"
+        },
+        {
             "Sid": "Allow Use of Key",
             "Effect": "Allow",
             "Principal": {
-                "AWS": "arn:aws:iam::546933502184:role/ugc-rds-db-macro-FunctionRole-10ZH7C360U4QY"
+                "AWS": "arn:aws:iam::546933502184:role/ugc-rds-db-macro-RdsMacroLogRole-1PLRLVDCE7B0Y"
             },
             "Action": [
                 "kms:Create*",
@@ -130,6 +157,8 @@ Below is an example policy:
             ],
             "Resource": "*"
         }
+    ]
+}
 ```
 
 In order to use this new instance you will need to take a snapshot of the instance and then update the stack with this new snaphost id. 
