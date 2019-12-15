@@ -21,6 +21,8 @@ for key, value in y.items():
                 v.update(k)
 ```
 
+This file [TestResults.md](TestResults.md) contains examples of how to configure the lambda to perform the different operations.
+
 ### Lambda
 
 ##### Setup
@@ -97,69 +99,26 @@ Commands:
 
 
 
-The script `startup.sh` creates python virtual env and executes the tunnel script.
+The script [startup.sh](startup.sh) creates python virtual env and executes the tunnel script.
 
 **NOTE**: You will need to change the address of the db instance.
 
-##### Point In Time Restore:
+#### Point In Time Restore:
 
-In order to be able to use this functionality the lambda role needs to be given permission to access the `kms` key used to encrypt and decrypt the database:
+<u>Add Lambda role to database kms encryption key</u>
+
+In order to perform a point in time restore the lambda role needs to be given permission to use the database kms encryption key. This is achieved by adding the lambda role to the key policy of the encryption key.
 
 The aliases for database encryption keys use the following naming convention: 
 
 **{environment}-ugc-postgres-passwords-key** where the *environment* is the parameter that is specified within the database stack.
 
-[key_policy.json](scripts/key_policy.json)
+Within the folder **scripts** the following files can be used to add the lambda role to the key policy.
 
-With the folder scripts the script add_key_policy.sh can be used to perform this task.
+| File                                           | Description                                                  | Usage                     |
+| ---------------------------------------------- | ------------------------------------------------------------ | ------------------------- |
+| [key_policy.json](scripts/key_policy.json)     | The contains the kms key policy to give the lambda.          |                           |
+| [add_key_policy.sh](scripts/add_key_policy.sh) | script used to add the policy to the database encryption key.  **./add_key_policy.sh {environment}**. NOTE: This will replace the key policy with the contents of the items specified in [key_policy.json](scripts/key_policy.json)| *./add_key_policy.sh int* |
 
-| File                     | Description | Usage |
-| ------------------------ | ----------- | ----- |
-| [scripts]key_policy.json | This conti  |       |
-|                          |             |       |
-|                          |             |       |
 
-Below is an example policy:
-
-```
-{
-    "Version": "2012-10-17",
-    "Id": "ugc-rds-encryption-key-policy",
-    "Statement": [
-        {
-            "Sid": "Administer key via root",
-            "Effect": "Allow",
-            "Principal": {
-                "AWS": "arn:aws:iam::546933502184:root"
-            },
-            "Action": "kms:*",
-            "Resource": "*"
-        },
-        {
-            "Sid": "Allow Use of Key",
-            "Effect": "Allow",
-            "Principal": {
-                "AWS": "arn:aws:iam::546933502184:role/ugc-rds-db-macro-RdsMacroLogRole-1PLRLVDCE7B0Y"
-            },
-            "Action": [
-                "kms:Create*",
-                "kms:Describe*",
-                "kms:Enable*",
-                "kms:List*",
-                "kms:Put*",
-                "kms:Update*",
-                "kms:Revoke*",
-                "kms:Disable*",
-                "kms:Get*",
-                "kms:Delete*",
-                "kms:ScheduleKeyDeletion",
-                "kms:CancelKeyDeletion"
-            ],
-            "Resource": "*"
-        }
-    ]
-}
-```
-
-In order to use this new instance you will need to take a snapshot of the instance and then update the stack with this new snaphost id. 
 

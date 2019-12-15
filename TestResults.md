@@ -9,14 +9,8 @@ Lambda Configuration:
 
 | Property              | Value            |
 | -------------------   | ----------------:|
-| rds_stack_name        | test-ugc-rds-stack|
-| latest_snaphot        | false             |
-| properties_to_add     |                   |
-| properties_to_remove  |                   |
+| replace_with_snapshot | false             |
 | restore_point_in_time | false             |
-| restore_time          |                   |
-| snapshot_type         |                   |
-| target_db_instancei   | not_yet           |
 
 
 ##### Outcome
@@ -31,7 +25,7 @@ It creates a new url for connecting to the database: ie.
 
 ### 2: Restore to latest snapshot:
 
-The following table shows the lambda configuration which will cause the macro to modify the stack template so that the database is restored to the latest snapshot.
+The following table shows the lambda configuration which will cause the macro to modify the stack template so that the database is restored to the latest manual snapshot of the instance specified in the stack *test-ugc-rds-stack*. 
 
 Following poperies are removed:
 
@@ -41,80 +35,116 @@ And the following property  is added
 
 `DBSnapshotIdentifier`
 
-
-
-| Property              | Value                       |      |
-| --------------------- | --------------------------- | ---- |
-| rds_stack_name        | test-ugc-rds-stack          |      |
-| latest_snaphot        | true                        |      |
-| properties_to_add     |                             |      |
-| properties_to_remove  | DBInstanceIdentifier,DBName |      |
-| restore_point_in_time | false                       |      |
-| restore_time          |                             |      |
-| snapshot_type         |                             |      |
-| target_db_instancei   | not_yet                     |      |
+| Property                | Value              |
+| ----------------------- | ------------------ |
+| rds_snapshot_stack_name | test-ugc-rds-stack |
+| replace_with_snapshot   | true               |
+| restore_point_in_time   | false              |
+| snapshot_type           | Manual             |
 
 ##### Outcome:
 
-Creates a new database that points the snapshot taken from test-ugc-database.
+Creates a new database using the latest snapshot of the database defined within the stack specifed by the variable *rds_snapshot_stack_name*.
 
 You will need to login in using the credentials for the test-ugc-database.
 
-It creates a new url that will be used to connect to the database
+It inherits the kms key used by the snapshot. If you restore from a diferent environment, it will use the kms key for that environment.
 
-It creates a random identifier for the database.
+### 3: Restore to Specific snapshot:
+
+The following table shows the lambda configuration which will cause the macro to modify the stack template so that the database is restored to the snapshot specified.
+
+Following poperies are removed:
+
+`DBInstanceIdentifier`and `DBName`
+
+And the following property  is added
+
+`DBSnapshotIdentifier`
+
+| Property                | Value                                                        |
+| ----------------------- | ------------------------------------------------------------ |
+| rds_snapshot_stack_name | test-ugc-rds-stack                                           |
+| replace_with_snapshot   | true                                                         |
+| restore_point_in_time   | false                                                        |
+| snapshot_id             | arn:aws:rds:eu-west-2:546933502184:snapshot:rds:mv-ugc-postgres-2019-12-06-11-10 |
+
+##### Outcome:
+
+Creates a new database using the snapshot specified.
 
 It inherits the kms key used by the snapshot. If you restore from a diferent environment, it will use the kms key for that environment.
 
-### 3: Restore to Latest Restorable Point:
+### 4: Add Properties
 
-The following table shows the lambda configuration which will cause the macro to restore the database to  the latest point in time. But makes no changes to the cloudformation template.
+The following configuration is used to change the *BackupRetentionPeriod* and the *DBName*.
 
-| Property              | Value                       |      |
-| --------------------- | --------------------------- | ---- |
-| rds_stack_name        | mv-rds-db-stack             |      |
-| latest_snaphot        | false                       |      |
-| properties_to_add     |                             |      |
-| properties_to_remove  | DBInstanceIdentifier,DBName |      |
-| restore_point_in_time | true                        |      |
-| restore_time          |                             |      |
-| snapshot_type         |                             |      |
-| target_db_instancei   | my_target_instance          |      |
+| Property              | Value                                                        |      |
+| --------------------- | ------------------------------------------------------------ | ---- |
+| replace_with_snapshot | false                                                        |      |
+| restore_point_in_time | false                                                        |      |
+| properties_to_add     | ```{"BackupRetentionPeriod": "100"},{"DBName": "new_db_name"`` |      |
 
-### 4: Restore to a specific point in time:
+### 5: Remove Properties
 
-The following table shows the lambda configuration which will cause the macro to restore the database to  the latest point in time. But makes no changes to the cloudformation template.
+The following configuration is used to remove *BackupRetentionPeriod* and *DBName* properties.
 
-| Property              | Value                       |      |
-| --------------------- | --------------------------- | ---- |
-| rds_stack_name        | mv-rds-db-stack             |      |
-| latest_snaphot        | false                       |      |
-| properties_to_add     |                             |      |
-| properties_to_remove  | DBInstanceIdentifier,DBName |      |
-| restore_point_in_time | true                        |      |
-| restore_time          | 2018-07-30T23:45:00.000Z    |      |
-| snapshot_type         |                             |      |
-| target_db_instancei   | my_target_instance          |      |
+| Property              | Value                             |      |
+| --------------------- | --------------------------------- | ---- |
+| replace_with_snapshot | false                             |      |
+| restore_point_in_time | false                             |      |
+| properties_to_remove  | *BackupRetentionPeriod*, *DBName* |      |
 
-### 5: Validate point in time restore:
+### 6: Restore to Latest Restorable Point:
 
-Below are the tests which will be performed in order to validate the database restoration procedure.
+Before performing a point in time restore make sure lambda tag **ugc:point-in-time:dbinstance** does not exist.
 
-##### Outline of Test steps:
+The lambda configuration below needs to be invoked twice.
 
-1. Restore to point in time on original database
+###### 1:First Invocation of the lambda:
 
-   1. Create db instance
-   2. Import dump database
-   3. modify data ... wait for ten minutes .. modify data.
-   4. Restore back to the first modification
+​	Create the db instance to latest restorable time, this process is dependent on the size of the database.
 
-   
+​	Creates a lambda tag **ugc:point-in-time:dbinstance** using the new instance id as the value.
 
-2. Restore to point in time from a snapshot.
+###### 2:Second Invocation of the lambda:
 
-   1. Create db instance
-   2. swith to using snapshot
-   3. modify data.. wait for 10 minutes.. modify data
-   4. restore back to first modification.
+​	Creates a snaphost of the instance specified by the lambda tag: **ugc:point-in-time:dbinstance**
+
+​	creates a new database using the snapshot.
+
+NOTE: This will not do anything until the state of db instance specified by the tag **ugc:point-in-time:dbinstance** is in the *Available* state. Therefore you may need to invoke the lamba multiple times.
+
+| Property              | Value |      |
+| --------------------- | ----- | ---- |
+| replace_with_snapshot | false |      |
+| restore_point_in_time | True  |      |
+
+
+
+### 7: Restore to a specific point in time:
+
+Before performing a point in time restore make sure the lambda tag **ugc:point-in-time:dbinstance** does not exist.
+
+The lambda configuration below needs to be invoked twice.
+
+###### 1:First Invocation of the lambda:
+
+​	Create the db instance to the time specified, this process is dependent on the size of the database.
+
+​	Creates a lambda tag **ugc:point-in-time:dbinstance** using the new instance id as the value.
+
+###### 2:Second Invocation of the lambda:
+
+​	Creates a snaphost of the instance specified by the lambda tag: **ugc:point-in-time:dbinstance**
+
+​	creates a new database using the snapshot.
+
+NOTE: This will not do anything until the state of db instance specified by the tag **ugc:point-in-time:dbinstance** is in the *Available* state. Therefore you may need to invoke the lamba multiple times.
+
+| Property              | Value                |
+| --------------------- | -------------------- |
+| replace_with_snapshot | false                |
+| restore_point_in_time | true                 |
+| restore_time          | 2009-09-07T23:45:00Z |
 
