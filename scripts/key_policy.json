@@ -1,0 +1,37 @@
+{
+    "Version": "2012-10-17",
+    "Id": "ugc-rds-encryption-key-policy",
+    "Statement": [
+        {
+            "Sid": "Administer key via root",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::546933502184:root"
+            },
+            "Action": "kms:*",
+            "Resource": "*"
+        },
+        {
+            "Sid": "Allow Use of Key",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::546933502184:role/ugc-rds-db-macro-RdsMacroLogRole-1PLRLVDCE7B0Y"
+            },
+            "Action": [
+                "kms:Create*",
+                "kms:Describe*",
+                "kms:Enable*",
+                "kms:List*",
+                "kms:Put*",
+                "kms:Update*",
+                "kms:Revoke*",
+                "kms:Disable*",
+                "kms:Get*",
+                "kms:Delete*",
+                "kms:ScheduleKeyDeletion",
+                "kms:CancelKeyDeletion"
+            ],
+            "Resource": "*"
+        }
+    ]
+}

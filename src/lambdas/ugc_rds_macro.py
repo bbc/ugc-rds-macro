@@ -25,6 +25,13 @@ do_not_ignore_get_template = True
 point_in_time_db_instance_tag = 'ugc:point-in-time:dbinstance'
 
 
+
+def _format_stacktrace():
+    parts = ["Traceback (most recent call last):\n"]
+    parts.extend(traceback.format_stack(limit=25)[:-2])
+    parts.extend(traceback.format_exception(*sys.exc_info())[1:])
+    return "".join(parts)
+
 def _add_snapshot_identifier(fragment, snapshot_id):
     for key, value in fragment.items():
         if key == 'Properties':
@@ -65,8 +72,9 @@ def get_ugc_database_template(stack_of_interest):
                 func_name, str(db_inst_temp)))
             return db_inst_temp
         except (ClientError, KeyError) as e:
-            logger.error(":{0}:problems getting deployed template".format(
-                func_name), exc_info=True)
+            stack_trace = _format_stacktrace()
+            logger.error(":{0}:problems getting deployed template: {1}".format(
+                func_name, stack_trace))
 
     return None
 
@@ -84,8 +92,9 @@ def get_snapshot_identifier(dbinstance_template):
         try:
             snapshot_id = db["Properties"]["DBSnapshotIdentifier"]
         except KeyError:
-            logger.error(":{0}:no snapshot identifier".format(
-                func_name), exc_info=True)
+            stack_trace = _format_stacktrace()
+            logger.debug(":{0}:no snapshot identifier: {1}: {2}".format(
+                func_name, dbinstance_template, stack_trace))
             return None
 
         return snapshot_id
@@ -170,12 +179,14 @@ def remove_properties(fragment):
 
 
 def _remove_property(fragment, prop):
+    func_name = traceback.extract_stack(None, 2)[0][2]
     try:
         for key, value in fragment.items():
             if key == 'Properties':
                 del value[prop.strip()]
     except KeyError:
-        logger.error("unable to remove property", exc_info=True)
+        stack_trace = _format_stacktrace()
+        logger.debug(":{0}:unable to remove property:{1} from fragment:{2} stack_trace={3}".format(func_name, prop, fragment, stack_trace))
 
 
 def get_instance_state(instance_id, instances):
@@ -240,7 +251,7 @@ def point_in_time_restore(fragment, stack_of_interest):
                     backup_retention_period = get_back_retention_period(
                         instances, db_instance)
                     if not check_if_point_in_time_date_is_valid(restore_time, backup_retention_period):
-                        raise Exception("Supplied date is not valid")
+                        raise Exception("Supplied date {0} is not valid".format(restore_time))
 
                     resp = client.restore_db_instance_to_point_in_time(
                         SourceDBInstanceIdentifier=db_instance,
@@ -255,8 +266,9 @@ def point_in_time_restore(fragment, stack_of_interest):
                 add_tag(point_in_time_db_instance_tag, target_db_instance)
 
             except ClientError as e:
-                logger.error(":{0}:POINT_IN_TIME_RESTORE:problems creating point in time restore".format(
-                    func_name), exc_info=True)
+                stack_trace = _format_stacktrace()
+                logger.error(":{0}:POINT_IN_TIME_RESTORE:problems creating point in time restore: stack_trace={1}".format(
+                    func_name, stack_trace))
 
             if resp:
                 logger.info(
@@ -331,8 +343,9 @@ def handler(event, context):
         snapshot_id = check_if_snapshot_identifier_needs_be_added(
             fragment, stack_of_interest)
     except:
-        logger.error(":{0}:something went wrong".format(
-            func_name), exc_info=True)
+        stack_trace = _format_stacktrace()
+        logger.error(":{0}:SOMETHING WENT WRONG:{1}".format(
+            func_name, stack_trace))
         deployed_template = get_ugc_database_template(stack_of_interest)
         if deployed_template:
             fragment = json.loads(deployed_template)
@@ -370,9 +383,9 @@ def check_if_point_in_time_date_is_valid(pnt_in_time, backup_retention_period):
     try:
         datetime = parse(pnt_in_time)
     except ValueError as e:
-        print(str(e))
-        logger.error("{0}:POINT_IN_TIME_DATE_IS_NOT_VALUE: point_in_time = {1}".format(
-            func_name, pnt_in_time))
+        stack_trace = _format_stacktrace()
+        logger.error("{0}:POINT_IN_TIME_DATE_IS_NOT_VALID: point_in_time = {1}: stack_trace={2}".format(
+            func_name, pnt_in_time, stack_trace))
         return False
 
     today = datetime.now(timezone.utc)
