@@ -131,7 +131,7 @@ rds_macro_lambda = t.add_resource(
         FunctionName=Sub("${LambdaEnv}-%s" % ugc_rds_macro_function_name),
         Role=GetAtt(function_role, "Arn"),
         Runtime="python3.7",
-        Timeout=180
+        Timeout=900
     )
 )
 
