@@ -21,7 +21,8 @@ from lambdas.ugc_rds_macro import (_add_snapshot_identifier, _remove_property,
                                    get_tagged_db_instance,
                                    get_ugc_database_template, handler,
                                    get_back_retention_period,
-                                   parse_db_identifier, remove_tag)
+                                   parse_db_identifier, remove_tag,
+                                   delete_db_instance, get_function_arn)
 
 _dir = os.path.dirname(os.path.realpath(__file__))
 FIXTURE_DIR = py.path.local(_dir) / 'test_files'
@@ -29,6 +30,7 @@ FIXTURE_DIR = py.path.local(_dir) / 'test_files'
 
 class TestContext:
     invoked_function_arn = "arn:aws:lambda:eu-west-2:546933502184:function:int-ugc-rds-macro"
+    function_name = "func-name"
 
 
 test_context = TestContext()
@@ -38,7 +40,6 @@ test_context = TestContext()
 lambdas.ugc_rds_macro.do_not_ignore_get_template = False
 
 lambdas.ugc_rds_macro.point_in_time_db_instance_tag
-
 
 def _read_test_data(datafiles, expected_file, orig_template):
     for testFile in datafiles.listdir():
@@ -52,7 +53,22 @@ def _read_test_data(datafiles, expected_file, orig_template):
     return (expected, db_instance_template)
 
 
-def _add_list_tag_response(lambda_stub):
+def _mock_delete_db_instance(rds_stub, datafiles, db_instance_id):
+    for test_file in datafiles.listdir():
+        if fnmatch.fnmatch(test_file, "*delete_db_instance_response.json"):
+            response = json.loads(test_file.read_text(encoding="utf-8"))
+
+    db_id = {'DBInstanceIdentifier': db_instance_id}
+    response['DBInstance'].update(db_id)
+    rds_stub.add_response(
+        "delete_db_instance",
+        expected_params={'DBInstanceIdentifier': db_instance_id,
+                         'SkipFinalSnapshot': True},
+        service_response=response
+    )
+
+
+def _mock_list_tags(lambda_stub):
     list_tag_response = {
         "Tags": {
             "aws:cloudformation:logical-id": "RdsSnapShotLambdaFunction",
@@ -62,12 +78,12 @@ def _add_list_tag_response(lambda_stub):
 
     lambda_stub.add_response(
         "list_tags",
-        expected_params={'Resource': lambdas.ugc_rds_macro.lambda_arn},
+        expected_params={'Resource': test_context.invoked_function_arn},
         service_response=list_tag_response
     )
 
 
-def _add_describe_db_instance_response(rds_stub, datafiles, id, state):
+def _mock_describe_db_instances(rds_stub, datafiles, id, state):
     for testFile in datafiles.listdir():
         if fnmatch.fnmatch(testFile, "*db_describe_instance_response.json"):
             desc_db_inst_response = json.loads(
@@ -87,7 +103,7 @@ def _add_describe_db_instance_response(rds_stub, datafiles, id, state):
     )
 
 
-def _add_tag_resource_response(lambda_stub, id):
+def _mock_add_tag(lambda_stub, id):
     response = {'ResponseMetadata':
                 {'RequestId': 'c48d99c2-704b-4d51-adc1-93d64eb60f2c',
                  'HTTPStatusCode': 204,
@@ -101,15 +117,31 @@ def _add_tag_resource_response(lambda_stub, id):
 
     lambda_stub.add_response(
         "tag_resource",
-        expected_params={'Resource': lambdas.ugc_rds_macro.lambda_arn,
+        expected_params={'Resource': test_context.invoked_function_arn,
                          'Tags': {lambdas.ugc_rds_macro.point_in_time_db_instance_tag: id}},
+        service_response=response
+    )
+
+
+def _mock_get_function_name(lambda_stub, datafiles, f_name, f_arn):
+    for test_file in datafiles.listdir():
+        if fnmatch.fnmatch(test_file, "*get_function_name_response.json"):
+            response = json.loads(test_file.read_text(encoding="utf-8"))
+
+    func = {'FunctionName': f_name}
+    arn = {'FunctionArn': f_arn}
+    response['Configuration'].update(func)
+    response['Configuration'].update(arn)
+    lambda_stub.add_response(
+        "get_function",
+        expected_params={'FunctionName': f_name},
         service_response=response
     )
 
 
 @pytest.mark.datafiles(
     FIXTURE_DIR / 'db_instance_template.json',
-    FIXTURE_DIR / 'db_instance_template_with_backup_retention_property_removed.json',
+    FIXTURE_DIR / 'db_instance_template_with_backup_retention_property_removed.json'
 )
 def test_handler_remove_property(monkeypatch, datafiles):
 
@@ -117,7 +149,7 @@ def test_handler_remove_property(monkeypatch, datafiles):
                                                        "db_instance_template_with_backup_retention_property_removed.json",
                                                        "db_instance_template.json")
 
-    monkeypatch.setenv("replace_with_snapshot", "False")
+    monkeypatch.setenv("replace_with_snapshot", "false")
     monkeypatch.setenv("snapshot_id", "")
     monkeypatch.setenv("properties_to_remove", "BackupRetentionPeriod")
     monkeypatch.setenv("properties_to_add", "")
@@ -137,7 +169,7 @@ def test_handler_remove_property(monkeypatch, datafiles):
 
 @pytest.mark.datafiles(
     FIXTURE_DIR / 'db_instance_template.json',
-    FIXTURE_DIR / 'db_instance_template_with_multiple_props_removed.json',
+    FIXTURE_DIR / 'db_instance_template_with_multiple_props_removed.json'
 )
 def test_handler_remove_multiple_properties(monkeypatch, datafiles):
 
@@ -148,7 +180,7 @@ def test_handler_remove_multiple_properties(monkeypatch, datafiles):
     monkeypatch.setenv("rds_snapshot_stack_name", "")
     monkeypatch.setenv("restore_time", "")
     monkeypatch.setenv("restore_point_in_time", "")
-
+ 
     (expected, db_instance_template) = _read_test_data(datafiles,
                                                        "db_instance_template_with_multiple_props_removed.json",
                                                        "db_instance_template.json")
@@ -203,7 +235,8 @@ def test_handler_add_multiple_properties(monkeypatch, datafiles):
     monkeypatch.setenv("rds_snapshot_stack_name", "arn")
     monkeypatch.setenv("restore_time", "")
     monkeypatch.setenv("restore_point_in_time", "")
-
+    monkeypatch.setenv("AWS_LAMBDA_FUNCTION_NAME", test_context.function_name)
+  
     (expected, db_instance_template) = _read_test_data(datafiles,
                                                        "db_instance_template_with_multiple_props_added.json",
                                                        "db_instance_template_props_removed.json")
@@ -232,8 +265,9 @@ def test_snapshot_identifer(rds_stub, monkeypatch, datafiles):
     monkeypatch.setenv("snapshot_type", " ")
     monkeypatch.setenv("restore_time", "")
     monkeypatch.setenv("restore_point_in_time", "")
+    monkeypatch.setenv("AWS_LAMBDA_FUNCTION_NAME", test_context.function_name)
 
-    _add_describe_db_instance_response(rds_stub,  datafiles, None, None)
+    _mock_describe_db_instances(rds_stub,  datafiles, None, None)
 
     response = {'DBSnapshots': [{'DBSnapshotIdentifier': 'rds:mv-ugc-postgres-2019-12-06-11-10', 'DBInstanceIdentifier': 'mv-ugc-postgres', 'SnapshotCreateTime': datetime(2019, 12, 6, 11, 10, 33, 790000), 'Engine': 'postgres', 'AllocatedStorage': 20, 'Status': 'available', 'Port': 5432, 'AvailabilityZone': 'eu-west-2b', 'VpcId': 'vpc-19483f70', 'InstanceCreateTime': datetime(2019, 12, 6, 11, 9, 28, 424000), 'MasterUsername': 'ugc', 'EngineVersion': '9.6.15', 'LicenseModel': 'postgresql-license', 'SnapshotType': 'automated', 'OptionGroupName': 'default:postgres-9-6', 'PercentProgress': 100, 'StorageType': 'standard',
                                  'Encrypted': True, 'KmsKeyId': 'arn:aws:kms:eu-west-2:546933502184:key/83f283d1-7b58-4827-854c-db776149795f', 'DBSnapshotArn': 'arn:aws:rds:eu-west-2:546933502184:snapshot:rds:mv-ugc-postgres-2019-12-06-11-10', 'IAMDatabaseAuthenticationEnabled': False, 'ProcessorFeatures': [], 'DbiResourceId': 'db-CQ76MXOJJIFBOQ7WT63Y6AXUKA'}], 'ResponseMetadata': {'RequestId': '8290e734-5717-4c94-9ed5-1eaf0aa20ec6', 'HTTPStatusCode': 200, 'HTTPHeaders': {'x-amzn-requestid': '8290e734-5717-4c94-9ed5-1eaf0aa20ec6', 'content-type': 'text/xml', 'content-length': '1687', 'date': 'Fri, 06 Dec 2019 15:02:09 GMT'}, 'RetryAttempts': 0}}
@@ -271,8 +305,9 @@ def test_snapshot_identifer_with_snapshot_type(rds_stub, monkeypatch, datafiles)
     monkeypatch.setenv("snapshot_type", "shared")
     monkeypatch.setenv("restore_time", "")
     monkeypatch.setenv("restore_point_in_time", "")
+    monkeypatch.setenv("AWS_LAMBDA_FUNCTION_NAME", test_context.function_name)
 
-    _add_describe_db_instance_response(rds_stub,  datafiles, None, None)
+    _mock_describe_db_instances(rds_stub,  datafiles, None, None)
 
     response = {'DBSnapshots': [{'DBSnapshotIdentifier': 'rds:mv-ugc-postgres-2019-12-06-11-10', 'DBInstanceIdentifier': 'mv-ugc-postgres', 'SnapshotCreateTime': datetime(2019, 12, 6, 11, 10, 33, 790000), 'Engine': 'postgres', 'AllocatedStorage': 20, 'Status': 'available', 'Port': 5432, 'AvailabilityZone': 'eu-west-2b', 'VpcId': 'vpc-19483f70', 'InstanceCreateTime': datetime(2019, 12, 6, 11, 9, 28, 424000), 'MasterUsername': 'ugc', 'EngineVersion': '9.6.15', 'LicenseModel': 'postgresql-license', 'SnapshotType': 'automated', 'OptionGroupName': 'default:postgres-9-6', 'PercentProgress': 100, 'StorageType': 'standard',
                                  'Encrypted': True, 'KmsKeyId': 'arn:aws:kms:eu-west-2:546933502184:key/83f283d1-7b58-4827-854c-db776149795f', 'DBSnapshotArn': 'arn:aws:rds:eu-west-2:546933502184:snapshot:rds:mv-ugc-postgres-2019-12-06-11-10', 'IAMDatabaseAuthenticationEnabled': False, 'ProcessorFeatures': [], 'DbiResourceId': 'db-CQ76MXOJJIFBOQ7WT63Y6AXUKA'}], 'ResponseMetadata': {'RequestId': '8290e734-5717-4c94-9ed5-1eaf0aa20ec6', 'HTTPStatusCode': 200, 'HTTPHeaders': {'x-amzn-requestid': '8290e734-5717-4c94-9ed5-1eaf0aa20ec6', 'content-type': 'text/xml', 'content-length': '1687', 'date': 'Fri, 06 Dec 2019 15:02:09 GMT'}, 'RetryAttempts': 0}}
@@ -298,7 +333,7 @@ def test_snapshot_identifer_with_snapshot_type(rds_stub, monkeypatch, datafiles)
 @pytest.mark.datafiles(
     FIXTURE_DIR / 'db_instance_template.json',
     FIXTURE_DIR / 'db_describe_instance_response.json'
-)
+ )
 def test_snapshot_identifer_with_invalid_snapshot_type(rds_stub, monkeypatch, datafiles):
 
     monkeypatch.setenv("properties_to_remove", "")
@@ -309,8 +344,8 @@ def test_snapshot_identifer_with_invalid_snapshot_type(rds_stub, monkeypatch, da
     monkeypatch.setenv("snapshot_type", "invalid_snapshot_type")
     monkeypatch.setenv("restore_time", "")
     monkeypatch.setenv("restore_point_in_time", "")
-
-    _add_describe_db_instance_response(rds_stub,  datafiles, None, None)
+   
+    _mock_describe_db_instances(rds_stub,  datafiles, None, None)
 
     (expected, db_instance_template) = _read_test_data(datafiles,
                                                        "db_instance_template.json",
@@ -327,7 +362,7 @@ def test_snapshot_identifer_with_invalid_snapshot_type(rds_stub, monkeypatch, da
 @pytest.mark.datafiles(
     FIXTURE_DIR / 'db_instance_template.json',
     FIXTURE_DIR / 'db_instance_template_with_supplied_snapshot_identifier.json',
-    FIXTURE_DIR / 'db_describe_instance_response.json'
+    FIXTURE_DIR / 'db_describe_instance_response.json' 
 )
 def test_snapshot_with_supplied_identifier(rds_stub, monkeypatch, datafiles):
 
@@ -339,7 +374,7 @@ def test_snapshot_with_supplied_identifier(rds_stub, monkeypatch, datafiles):
     monkeypatch.setenv("snapshot_type", "shared")
     monkeypatch.setenv("restore_time", "")
     monkeypatch.setenv("restore_point_in_time", "")
-
+ 
     (expected, db_instance_template) = _read_test_data(datafiles,
                                                        "db_instance_template_with_supplied_snapshot_identifier.json",
                                                        "db_instance_template.json")
@@ -355,7 +390,9 @@ def test_snapshot_with_supplied_identifier(rds_stub, monkeypatch, datafiles):
 @pytest.mark.datafiles(
     FIXTURE_DIR / 'db_instance_template.json',
     FIXTURE_DIR / 'db_restore_to_point_in_time.json',
-    FIXTURE_DIR / 'db_describe_instance_response.json'
+    FIXTURE_DIR / 'db_describe_instance_response.json',
+    FIXTURE_DIR / 'delete_db_instance_response.json',
+    FIXTURE_DIR / 'get_function_name_response.json' 
 )
 def test_point_in_time_create_snap_shot(mocker, monkeypatch, lambda_stub, rds_stub, datafiles):
     monkeypatch.setenv("properties_to_remove", "")
@@ -365,12 +402,15 @@ def test_point_in_time_create_snap_shot(mocker, monkeypatch, lambda_stub, rds_st
     monkeypatch.setenv("snapshot_type", "shared")
     monkeypatch.setenv("restore_time", "2018-07-30T23:45:00.000Z")
     monkeypatch.setenv("restore_point_in_time", "true")
+    monkeypatch.setenv("AWS_LAMBDA_FUNCTION_NAME", test_context.function_name)
+
 
     test_snapshot_id = uuid.uuid4()
     target_db_instance_id = "tdi{0}".format(str(test_snapshot_id))
     mocker.patch.object(uuid, 'uuid4', return_value=test_snapshot_id)
-    _add_describe_db_instance_response(
-        rds_stub,  datafiles, target_db_instance_id, "Available")
+    _mock_describe_db_instances(rds_stub,  datafiles, target_db_instance_id, "Available")
+    _mock_get_function_name(lambda_stub, datafiles, test_context.function_name,
+                            test_context.invoked_function_arn) 
     create_db_response = {
         "DBSnapshot": {
             "DBSnapshotIdentifier": target_db_instance_id,
@@ -413,13 +453,13 @@ def test_point_in_time_create_snap_shot(mocker, monkeypatch, lambda_stub, rds_st
     }
     lambda_stub.add_response(
         "list_tags",
-        expected_params={'Resource': lambdas.ugc_rds_macro.lambda_arn},
+        expected_params={'Resource': test_context.invoked_function_arn},
         service_response=list_tag_response
     )
 
     lambda_stub.add_response(
         "untag_resource",
-        expected_params={'Resource': lambdas.ugc_rds_macro.lambda_arn, 'TagKeys': [
+        expected_params={'Resource': test_context.invoked_function_arn, 'TagKeys': [
             'ugc:point-in-time:dbinstance']},
         service_response={}
     )
@@ -430,6 +470,7 @@ def test_point_in_time_create_snap_shot(mocker, monkeypatch, lambda_stub, rds_st
     _remove_property(expected, "DBInstanceIdentifier")
     _remove_property(expected, "DBName")
     _add_snapshot_identifier(expected, "rsi{0}".format(str(test_snapshot_id)))
+    _mock_delete_db_instance(rds_stub, datafiles, target_db_instance_id)
 
     i = {'stackname': 'dv-rds-database-stack'}
     f = {'fragment': db_instance_template,
@@ -443,7 +484,8 @@ def test_point_in_time_create_snap_shot(mocker, monkeypatch, lambda_stub, rds_st
 @pytest.mark.datafiles(
     FIXTURE_DIR / 'db_instance_template.json',
     FIXTURE_DIR / 'db_restore_to_point_in_time.json',
-    FIXTURE_DIR / 'db_describe_instance_response.json'
+    FIXTURE_DIR / 'db_describe_instance_response.json',
+    FIXTURE_DIR / 'get_function_name_response.json'    
 )
 def test_point_in_time_restore_to_a_specific_time(rds_stub, lambda_stub, monkeypatch, datafiles, mocker):
     monkeypatch.setenv("properties_to_remove", "")
@@ -455,13 +497,17 @@ def test_point_in_time_restore_to_a_specific_time(rds_stub, lambda_stub, monkeyp
     restore_time = today - timedelta(days=1)
     monkeypatch.setenv("restore_time", str(restore_time))
     monkeypatch.setenv("restore_point_in_time", "true")
+    monkeypatch.setenv("AWS_LAMBDA_FUNCTION_NAME", test_context.function_name)
+
 
     test_snapshot_id = uuid.uuid4()
     mocker.patch.object(uuid, 'uuid4', return_value=test_snapshot_id)
-    _add_list_tag_response(lambda_stub)
-    _add_describe_db_instance_response(rds_stub,  datafiles, None, None)
+    _mock_get_function_name(lambda_stub, datafiles, test_context.function_name,
+                            test_context.invoked_function_arn)    
+    _mock_list_tags(lambda_stub)
+    _mock_describe_db_instances(rds_stub,  datafiles, None, None)
     target_db_instance_id = "tdi{0}".format(str(test_snapshot_id))
-    _add_tag_resource_response(lambda_stub, target_db_instance_id)
+    _mock_add_tag(lambda_stub, target_db_instance_id)
 
     response = {
         "DBInstance": {
@@ -494,7 +540,8 @@ def test_point_in_time_restore_to_a_specific_time(rds_stub, lambda_stub, monkeyp
 
 @pytest.mark.datafiles(
     FIXTURE_DIR / 'db_instance_template.json',
-    FIXTURE_DIR / 'db_describe_instance_response.json'
+    FIXTURE_DIR / 'db_describe_instance_response.json',
+    FIXTURE_DIR / 'get_function_name_response.json'
 )
 def test_point_in_time_restore_using_invalid_time(rds_stub, lambda_stub, monkeypatch, datafiles, mocker):
     monkeypatch.setenv("properties_to_remove", "")
@@ -504,11 +551,15 @@ def test_point_in_time_restore_using_invalid_time(rds_stub, lambda_stub, monkeyp
     monkeypatch.setenv("snapshot_type", "shared")
     monkeypatch.setenv("restore_time", "INVALID_DATE")
     monkeypatch.setenv("restore_point_in_time", "true")
+    monkeypatch.setenv("AWS_LAMBDA_FUNCTION_NAME", test_context.function_name)
+
 
     test_snapshot_id = uuid.uuid4()
     mocker.patch.object(uuid, 'uuid4', return_value=test_snapshot_id)
-    _add_list_tag_response(lambda_stub)
-    _add_describe_db_instance_response(rds_stub,  datafiles, None, None)
+    _mock_get_function_name(lambda_stub, datafiles, test_context.function_name,
+                            test_context.invoked_function_arn)
+    _mock_list_tags(lambda_stub)
+    _mock_describe_db_instances(rds_stub,  datafiles, None, None)
 
     (expected, db_instance_template) = _read_test_data(datafiles,
                                                        "db_instance_template.json",
@@ -526,7 +577,8 @@ def test_point_in_time_restore_using_invalid_time(rds_stub, lambda_stub, monkeyp
 @pytest.mark.datafiles(
     FIXTURE_DIR / 'db_instance_template.json',
     FIXTURE_DIR / 'db_restore_to_point_in_time.json',
-    FIXTURE_DIR / 'db_describe_instance_response.json'
+    FIXTURE_DIR / 'db_describe_instance_response.json',
+    FIXTURE_DIR / 'get_function_name_response.json'
 )
 def test_point_in_time_restore_latest_restorable_time(rds_stub, lambda_stub, cloudformation_stub, monkeypatch, datafiles, mocker):
     monkeypatch.setenv("properties_to_remove", "")
@@ -536,6 +588,8 @@ def test_point_in_time_restore_latest_restorable_time(rds_stub, lambda_stub, clo
     monkeypatch.setenv("snapshot_type", "shared")
     monkeypatch.setenv("restore_time", "")
     monkeypatch.setenv("restore_point_in_time", "true")
+    monkeypatch.setenv("AWS_LAMBDA_FUNCTION_NAME", test_context.function_name)
+
 
     test_snapshot_id = uuid.uuid4()
     target_db_instance_id = "tdi{0}".format(str(test_snapshot_id))
@@ -544,9 +598,11 @@ def test_point_in_time_restore_latest_restorable_time(rds_stub, lambda_stub, clo
         monkeypatch.setattr(uuid, "uuid4", test_snapshot_id)
     """
     mocker.patch.object(uuid, 'uuid4', return_value=test_snapshot_id)
-    _add_list_tag_response(lambda_stub)
-    _add_describe_db_instance_response(rds_stub,  datafiles, None, None)
-    _add_tag_resource_response(lambda_stub, target_db_instance_id)
+    _mock_get_function_name(lambda_stub, datafiles, test_context.function_name,
+                            test_context.invoked_function_arn)    
+    _mock_list_tags(lambda_stub)
+    _mock_describe_db_instances(rds_stub,  datafiles, None, None)
+    _mock_add_tag(lambda_stub, target_db_instance_id)
 
     response = {
         "DBInstance": {
@@ -578,7 +634,8 @@ def test_point_in_time_restore_latest_restorable_time(rds_stub, lambda_stub, clo
 
 @pytest.mark.datafiles(
     FIXTURE_DIR / 'db_instance_template.json',
-    FIXTURE_DIR / 'db_describe_instance_response.json'
+    FIXTURE_DIR / 'db_describe_instance_response.json',
+    FIXTURE_DIR / 'get_function_name_response.json'
 )
 def test_point_in_time_restore_when_instance_is_being_created(rds_stub, lambda_stub, cloudformation_stub, monkeypatch, datafiles, mocker):
     monkeypatch.setenv("properties_to_remove", "")
@@ -588,11 +645,14 @@ def test_point_in_time_restore_when_instance_is_being_created(rds_stub, lambda_s
     monkeypatch.setenv("snapshot_type", "shared")
     monkeypatch.setenv("restore_time", "")
     monkeypatch.setenv("restore_point_in_time", "true")
+    monkeypatch.setenv("AWS_LAMBDA_FUNCTION_NAME", test_context.function_name)
 
     test_snapshot_id = uuid.uuid4()
     target_db_instance_id = "tdi{0}".format(str(test_snapshot_id))
     mocker.patch.object(uuid, 'uuid4', return_value=test_snapshot_id)
-    _add_describe_db_instance_response(
+    _mock_get_function_name(lambda_stub, datafiles, test_context.function_name,
+                            test_context.invoked_function_arn)
+    _mock_describe_db_instances(
         rds_stub,  datafiles, target_db_instance_id, "Creating")
 
     list_tag_response = {
@@ -604,7 +664,7 @@ def test_point_in_time_restore_when_instance_is_being_created(rds_stub, lambda_s
     }
     lambda_stub.add_response(
         "list_tags",
-        expected_params={'Resource': lambdas.ugc_rds_macro.lambda_arn},
+        expected_params={'Resource': test_context.invoked_function_arn},
         service_response=list_tag_response
     )
 
@@ -624,7 +684,8 @@ def test_point_in_time_restore_when_instance_is_being_created(rds_stub, lambda_s
 
 @pytest.mark.datafiles(
     FIXTURE_DIR / 'db_instance_template.json',
-    FIXTURE_DIR / 'db_describe_instance_response.json'
+    FIXTURE_DIR / 'db_describe_instance_response.json',
+    FIXTURE_DIR / 'get_function_name_response.json'    
 )
 def test_point_in_time_restore_when_instance_is_being_modified(rds_stub, lambda_stub, cloudformation_stub, monkeypatch, datafiles, mocker):
     monkeypatch.setenv("properties_to_remove", "")
@@ -634,11 +695,16 @@ def test_point_in_time_restore_when_instance_is_being_modified(rds_stub, lambda_
     monkeypatch.setenv("snapshot_type", "shared")
     monkeypatch.setenv("restore_time", "")
     monkeypatch.setenv("restore_point_in_time", "true")
+    monkeypatch.setenv("AWS_LAMBDA_FUNCTION_NAME", test_context.function_name)
+
+
 
     test_snapshot_id = uuid.uuid4()
     target_db_instance_id = "tdi{0}".format(str(test_snapshot_id))
     mocker.patch.object(uuid, 'uuid4', return_value=test_snapshot_id)
-    _add_describe_db_instance_response(
+    _mock_get_function_name(lambda_stub, datafiles, test_context.function_name,
+                            test_context.invoked_function_arn)
+    _mock_describe_db_instances(
         rds_stub,  datafiles, target_db_instance_id, "Modifying")
 
     list_tag_response = {
@@ -650,7 +716,7 @@ def test_point_in_time_restore_when_instance_is_being_modified(rds_stub, lambda_
     }
     lambda_stub.add_response(
         "list_tags",
-        expected_params={'Resource': lambdas.ugc_rds_macro.lambda_arn},
+        expected_params={'Resource': test_context.invoked_function_arn},
         service_response=list_tag_response
     )
 
@@ -753,7 +819,7 @@ def test_get_instance_state_when_instance_not_found(datafiles):
 
 
 @pytest.mark.datafiles(
-    FIXTURE_DIR / 'db_instance_template.json'
+    FIXTURE_DIR / 'db_instance_template.json',
 )
 def test_invalid_log_level(monkeypatch, datafiles):
     monkeypatch.setenv("properties_to_remove", "")
@@ -764,6 +830,7 @@ def test_invalid_log_level(monkeypatch, datafiles):
     monkeypatch.setenv("restore_time", "")
     monkeypatch.setenv("restore_point_in_time", "true")
     monkeypatch.setenv("log_level", "not_valid")
+    monkeypatch.setenv("AWS_LAMBDA_FUNCTION_NAME", test_context.function_name)
 
     (expected, db_instance_template) = _read_test_data(datafiles,
                                                        "db_instance_template.json",
@@ -782,11 +849,11 @@ def test_invalid_log_level(monkeypatch, datafiles):
 def test_remove_tag(lambda_stub):
     lambda_stub.add_response(
         "untag_resource",
-        expected_params={'Resource': lambdas.ugc_rds_macro.lambda_arn, 'TagKeys': [
+        expected_params={'Resource': test_context.invoked_function_arn, 'TagKeys': [
             'ugc:point-in-time:dbinstance']},
         service_response={}
     )
-    remove_tag()
+    remove_tag(test_context.invoked_function_arn)
 
 
 def test_add_tag(lambda_stub):
@@ -795,11 +862,11 @@ def test_add_tag(lambda_stub):
     lambda_stub.add_response(
         "tag_resource",
         expected_params={
-            'Resource': lambdas.ugc_rds_macro.lambda_arn, 'Tags': {tag: value}},
+            'Resource': test_context.invoked_function_arn, 'Tags': {tag: value}},
         service_response={}
     )
 
-    add_tag(tag, value)
+    add_tag(tag, value, test_context.invoked_function_arn)
 
 
 def test_get_tagged_db_instance(lambda_stub):
@@ -813,11 +880,11 @@ def test_get_tagged_db_instance(lambda_stub):
     }
     lambda_stub.add_response(
         "list_tags",
-        expected_params={'Resource': lambdas.ugc_rds_macro.lambda_arn},
+        expected_params={'Resource': test_context.invoked_function_arn},
         service_response=response
     )
 
-    instance = get_tagged_db_instance()
+    instance = get_tagged_db_instance(test_context.invoked_function_arn)
     assert instance == "mr15xh2mg99mr07"
 
 
@@ -831,20 +898,22 @@ def test_get_tagged_db_instance_when_no_instance(lambda_stub):
     }
     lambda_stub.add_response(
         "list_tags",
-        expected_params={'Resource': lambdas.ugc_rds_macro.lambda_arn},
+        expected_params={'Resource': test_context.invoked_function_arn},
         service_response=response
     )
 
-    instance = get_tagged_db_instance()
+    instance = get_tagged_db_instance(test_context.invoked_function_arn)
     assert instance == None
 
 
-def test_when_stack_name_is_not_supplied():
+def test_when_stack_name_is_not_supplied(monkeypatch, datafiles):
+
+    monkeypatch.setenv("AWS_LAMBDA_FUNCTION_NAME", test_context.function_name)
 
     i = {'nostackname': 'one-rds-db-stack'}
     f = {'fragment': 'test data',
          'requestId': 'my_request_id', 'params': i}
-
+    
     with pytest.raises(Exception) as e:
         handler(f, test_context)
     assert str(e.value) == "stackname parameter was not defined in the macro"
@@ -877,9 +946,30 @@ def test_check_if_point_in_time_date_is_valid_fails_for_days_less_than_retention
     FIXTURE_DIR / 'db_describe_instance_response.json'
 )
 def test_get_back_retention_period(datafiles):
-
     for testFile in datafiles.listdir():
         if fnmatch.fnmatch(testFile, "*db_describe_instance_response.json"):
             response = json.loads(testFile.read_text(encoding="utf-8"))
 
     assert 100 == get_back_retention_period(response, "dv-ugc-postgres")
+
+
+@pytest.mark.datafiles(
+    FIXTURE_DIR / 'delete_db_instance_response.json'
+)
+def test_delete_db_instance(rds_stub, datafiles):
+    db_instance_id = "instance-to-delete-id"
+    _mock_delete_db_instance(rds_stub, datafiles, db_instance_id)
+    delete_instance_id = delete_db_instance(db_instance_id)
+
+    assert delete_instance_id == db_instance_id
+
+
+@pytest.mark.datafiles(
+    FIXTURE_DIR / 'get_function_name_response.json'
+)
+def test_get_function_arn(lambda_stub, datafiles):
+    f_name = "int-rds-macro"
+    f_arn = "arn:aws:lambda:eu-west-2:546933502184:function:int-ugc-rds-macro"
+    _mock_get_function_name(lambda_stub, datafiles, f_name, f_arn)
+    res = get_function_arn(f_name)
+    assert res == f_arn

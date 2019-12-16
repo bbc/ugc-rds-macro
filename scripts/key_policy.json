@@ -15,7 +15,7 @@
             "Sid": "Allow Use of Key",
             "Effect": "Allow",
             "Principal": {
-                "AWS": "arn:aws:iam::546933502184:role/ugc-rds-db-macro-RdsMacroLogRole-1PLRLVDCE7B0Y"
+                "AWS": "arn:aws:iam::546933502184:role/ugc-rds-db-macro-FunctionRole-10ZH7C360U4QY"
             },
             "Action": [
                 "kms:Create*",

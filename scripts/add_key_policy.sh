@@ -1,4 +1,4 @@
-key_id="aws kms list-aliases | jq '.Aliases[]  | select(.AliasName==\"alias/$1-ugc-postgres-passwords-key\")| .TargetKeyId'"
+key_id="aws kms list-aliases | jq '.Aliases[]  | select(.AliasName==\"alias/$1-ugc-rds-encryption-key\")| .TargetKeyId'"
 eval id=\$\($key_id\)
 echo key-id=$id
 if [ -z "$id" ]

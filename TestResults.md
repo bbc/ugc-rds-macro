@@ -119,6 +119,7 @@ NOTE: This will not do anything until the state of db instance specified by the 
 | --------------------- | ----- | ---- |
 | replace_with_snapshot | false |      |
 | restore_point_in_time | True  |      |
+| restore_time          |       |      |
 
 
 

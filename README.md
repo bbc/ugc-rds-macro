@@ -1,8 +1,6 @@
 # ugc-rds-macro
 
-This is a aws cloudformation macro that is used to manipulate the template fragment of type `AWS::RDS::DBInstance`
-
-NOTE:  The macro does not modify the existing template but applies changes to new template which contains the construct used to invoke the macro `Fn::Transfom`. It then replaces the existing template with newly generated template but with the following construct `Fn::Transform` removed.
+AWS cloudformation macro that is used to manipulate template fragment of type `AWS::RDS::DBInstance`
 
 ### Usage
 
@@ -43,11 +41,15 @@ After making code changes run the following command to create a new zip, upload 
 
 ``upload.sh``
 
-##### Testing
+##### Runing Tests
+
+Within *src* directory type the following:
+
+`python -m pytest`
 
 `NOTE`: All tests that invoke operations that use `get_template` cloudformation api have been skipped because of an issue with the stubber provided by boto3. The following issue as been raised: https://github.com/boto/botocore/issues/1911
 
-`python -m pytest`
+
 
 ##### Lambda Configuration
 
@@ -58,12 +60,12 @@ Below are the list of global environment variables used by the lambda
 | log_level               | The verbosity of the logging displayed in cloudwatch:possible values [INFO, DEBUG, CRITICAL, WARNING, NOTSET] | INFO                                                         |
 | rds_snapshot_stack_name | The stack of the database you want to take the snapshot of   | test-ugc-rds-stack                                           |
 | replace_snapshot        | Used to indicate if db instance should be replaced with a snapshot. Accepted Values = =[True == replace db instance with snapshot, False == dont replace instance with snapshot ] | True                                                         |
-| snapshot_id             | AWS ARN of the the snapshot. If **blank** The latest snapshot of the database defined in the stack supplied by this variable [rds_snapshot_stack_name] will be used | arn:aws:rds:eu-west-2:546933502184:snapshot:rds:test-ugc-postgres-2019-12-03-02-13 |
-| restore_point_in_time   | Used to perform a point in time restore.                     | True                                                         |
-| restore_time            | The time to restore from. If empty restores from the latest restorable time. | 2009-09-07T23:45:00Z                                         |
+| snapshot_id             | DBSnapshotIdentifier or DBSnapshotArn. If **blank** The latest snapshot of the database defined in the stack [rds_snapshot_stack_name] will be used | arn:aws:rds:eu-west-2:546933502184:snapshot:rds:test-ugc-postgres-2019-12-03-02-13 |
+| restore_point_in_time   | Used to indicate whether to perform a point in time restore.Accepted Values = =[True == perform restore, False == do not perform restore] | True                                                         |
+| restore_time            | The time to restore to. If empty restores to the latest restorable time. | 2009-09-07T23:45:00Z                                         |
 | properties_to_add       | A command separated list of items to add to the template, each item should be a wellormed json object. | ```{"BackupRetentionPeriod": {"Ref": "BackupRetentionDays"}},{"DBName": { "Ref": "DatabaseName"}}`` |
 | properties_to_remove    | a comma seperated list of items to remove.                   | BackupRetentionPeriod, DBName                                |
-| snap_shot_type          | If this value is not set not it will only fetch the manual and  automated snapshots. Refere to this:https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/rds.html#RDS.Client.describe_db_snapshots | shared                                                       |
+| snap_shot_type          | For accepatable values refer to this:https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/rds.html#RDS.Client.describe_db_snapshots | shared                                                       |
 
 ### Cloudformation Stack
 
@@ -81,7 +83,7 @@ The generated template can then be used to create the cloudformation stack.
 
 The python script  `scripts\test_db_tunnel.py` can be used to create a tunnnel to the newly created database.
 
-Below are usag instructions. 
+Below are usage instructions. 
 
 ```
 
@@ -111,7 +113,7 @@ In order to perform a point in time restore the lambda role needs to be given pe
 
 The aliases for database encryption keys use the following naming convention: 
 
-**{environment}-ugc-postgres-passwords-key** where the *environment* is the parameter that is specified within the database stack.
+**{environment}-ugc-rds-encryption-key** where the *environment* is the parameter that is specified within the database stack.
 
 Within the folder **scripts** the following files can be used to add the lambda role to the key policy.
 

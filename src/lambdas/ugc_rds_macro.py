@@ -19,11 +19,9 @@ snap_shot_types = set(['automated', 'manual', 'shared', 'public', 'awsbackup'])
 client = boto3.client('rds')
 cf_client = boto3.client('cloudformation')
 lambda_client = boto3.client('lambda')
-lambda_arn = "arn:aws:lambda:eu-west-2:546933502184:function:int-ugc-rds-macro"
 
 do_not_ignore_get_template = True
 point_in_time_db_instance_tag = 'ugc:point-in-time:dbinstance'
-
 
 
 def _format_stacktrace():
@@ -31,6 +29,7 @@ def _format_stacktrace():
     parts.extend(traceback.format_stack(limit=25)[:-2])
     parts.extend(traceback.format_exception(*sys.exc_info())[1:])
     return "".join(parts)
+
 
 def _add_snapshot_identifier(fragment, snapshot_id):
     for key, value in fragment.items():
@@ -45,7 +44,7 @@ def check_if_snapshot_identifier_needs_be_added(fragment, stack_of_interest):
     fragment_snapshot_id = get_snapshot_identifier(fragment)
     snapshot_id = get_snapshot_identifier(
         get_ugc_database_template(stack_of_interest))
-    logger.info(":{0}:snapshot id of [fragment = {1} deployed = {2} ".format(
+    logger.debug(":{0}:snapshot id of [fragment = {1} deployed = {2} ".format(
         func_name,  fragment_snapshot_id, snapshot_id))
     if snapshot_id != None and fragment_snapshot_id == None:
         logger.debug(":{0}:add snapshot id to template {1}".format(
@@ -88,7 +87,7 @@ def get_snapshot_identifier(dbinstance_template):
             db = json.loads(dbinstance_template)
 
         v = json.dumps(db)
-        logger.info(":{0}:{1}".format(func_name, str(v)))
+        logger.debug(":{0}:{1}".format(func_name, str(v)))
         try:
             snapshot_id = db["Properties"]["DBSnapshotIdentifier"]
         except KeyError:
@@ -117,7 +116,7 @@ def update_snapshot(fragment, stack_of_interest):
 
         if snapshot_id:
             _add_snapshot_identifier(fragment, snapshot_id)
-            logger.info(":{0}:adding snapshot {1}".format(
+            logger.debug(":{0}:adding snapshot = {1}".format(
                 func_name, snapshot_id))
         elif rds_snapshot_stack_name:
             _create_snapshot_using_stack_name(
@@ -131,7 +130,7 @@ def _create_snapshot_using_stack_name(stackname, fragment):
     snapshot_type = os.environ['snapshot_type'].rstrip()
     instances = client.describe_db_instances()
     db_instance = parse_db_identifier(instances, stackname)
-    logger.info(":{0}:creating snapshot for db_instance [{1}]".format(
+    logger.debug(":{0}:creating snapshot for db_instance = [{1}]".format(
         func_name, db_instance))
     if db_instance:
         if snapshot_type:
@@ -151,7 +150,7 @@ def _create_snapshot_using_stack_name(stackname, fragment):
         all_snap_shots = snapshots['DBSnapshots']
         if len(all_snap_shots) > 0:
             snap_shot_id = all_snap_shots[0]['DBSnapshotArn']
-            logger.debug(":{0}:adding snapshot {1}".format(
+            logger.info(":{0}:adding snapshot {1}".format(
                 func_name, snap_shot_id))
             _add_snapshot_identifier(fragment, snap_shot_id)
 
@@ -186,7 +185,8 @@ def _remove_property(fragment, prop):
                 del value[prop.strip()]
     except KeyError:
         stack_trace = _format_stacktrace()
-        logger.debug(":{0}:unable to remove property:{1} from fragment:{2} stack_trace={3}".format(func_name, prop, fragment, stack_trace))
+        logger.debug(":{0}:unable to remove property = [{1}] from fragment = [{2}] stack_trace= [{3}]".format(
+            func_name, prop, fragment, stack_trace))
 
 
 def get_instance_state(instance_id, instances):
@@ -198,7 +198,7 @@ def get_instance_state(instance_id, instances):
     return None
 
 
-def remove_tag():
+def remove_tag(lambda_arn):
     func_name = traceback.extract_stack(None, 2)[0][2]
     response = lambda_client.untag_resource(
         Resource=lambda_arn,
@@ -206,16 +206,16 @@ def remove_tag():
     logger.debug(":{0}: response = [{1}]".format(func_name, str(response)))
 
 
-def add_tag(key, value):
+def add_tag(key, value, lambda_arn):
     func_name = traceback.extract_stack(None, 2)[0][2]
     tags = {key: value}
-    logger.debug(":{0}: lambda_arn[{1}]".format(func_name, lambda_arn))
+    logger.debug(":{0}: lambda_arn = [{1}]".format(func_name, lambda_arn))
     res = lambda_client.tag_resource(
         Resource=lambda_arn, Tags=tags)
     logger.debug(":{0}:response from add tag {1}".format(func_name, res))
 
 
-def get_tagged_db_instance():
+def get_tagged_db_instance(lambda_arn):
     func_name = traceback.extract_stack(None, 2)[0][2]
     tags = lambda_client.list_tags(Resource=lambda_arn)
     logger.debug(":{0}: list_of_tags = {1}".format(func_name, str(tags)))
@@ -235,23 +235,25 @@ def point_in_time_restore(fragment, stack_of_interest):
     resp = None
 
     if restore and replace_with_snapshot != "true":
+        lambda_arn = get_function_arn(os.environ['AWS_LAMBDA_FUNCTION_NAME'])
         instances = client.describe_db_instances()
         db_instance = parse_db_identifier(instances, stack_of_interest)
-        target_db_instance = get_tagged_db_instance()
+        target_db_instance = get_tagged_db_instance(lambda_arn)
         state = None
         if target_db_instance:
             state = get_instance_state(target_db_instance, instances)
 
         if db_instance and state == None:
             target_db_instance = "tdi"+str(uuid.uuid4())
-            logger.info(":{0}:PERFORMING POINT IN TIME RESTORE:curent_db_instance = {1} taget_db_instance = {2} state = {3}".format(
-                func_name, db_instance, target_db_instance, state))
+            logger.info(":{0}:pefrorming point in time restore curent_db_instance = [{1}] taget_db_instance = [{2}] state = [{3}] restore_time=[{4}]".format(
+                func_name, db_instance, target_db_instance, state, restore_time))
             try:
                 if restore.lower() == "true" and restore_time:
                     backup_retention_period = get_back_retention_period(
                         instances, db_instance)
                     if not check_if_point_in_time_date_is_valid(restore_time, backup_retention_period):
-                        raise Exception("Supplied date {0} is not valid".format(restore_time))
+                        raise Exception(
+                            "Supplied date {0} is not valid".format(restore_time))
 
                     resp = client.restore_db_instance_to_point_in_time(
                         SourceDBInstanceIdentifier=db_instance,
@@ -263,16 +265,17 @@ def point_in_time_restore(fragment, stack_of_interest):
                         TargetDBInstanceIdentifier=target_db_instance,
                         UseLatestRestorableTime=True)
 
-                add_tag(point_in_time_db_instance_tag, target_db_instance)
+                logger.info(":{0}:response from point in time restore = {1}".format(func_name, resp))
+                
+                if resp:    
+                    add_tag(point_in_time_db_instance_tag, target_db_instance, lambda_arn)
 
             except ClientError as e:
                 stack_trace = _format_stacktrace()
                 logger.error(":{0}:POINT_IN_TIME_RESTORE:problems creating point in time restore: stack_trace={1}".format(
                     func_name, stack_trace))
 
-            if resp:
-                logger.info(
-                    ":{0}:POINT_IN_TIME_RESTORE:response from point in time restore = {1}".format(func_name, resp))
+            
 
         elif db_instance and state.lower() in 'creating':
             logger.debug(":{0}:POINT_IN_TIME_RESTORE_CREATING:point in time restore has not finnished creating yet:{1}".format(
@@ -302,61 +305,12 @@ def point_in_time_restore(fragment, stack_of_interest):
             _remove_property(fragment, "DBInstanceIdentifier")
             _remove_property(fragment, "DBName")
             _add_snapshot_identifier(fragment, restored_snapshot_id)
-            remove_tag()
+            remove_tag(lambda_arn)
+            delete_db_instance(target_db_instance)
         else:
-            logger.error("should not be here if doing point in time restore")
+            logger.error(":{0}:should not be here if doing point in time restore".format(func_name))
 
     return fragment
-
-
-def handler(event, context):
-    level = logging.getLevelName(os.environ['log_level'].rstrip().upper())
-    do_not_skip_processing = True
-    try:
-        logger.setLevel(level)
-    except ValueError as ve:
-        print("Logger level is not  valid {0}".format(str(ve)))
-        do_not_skip_processing = False
-
-    #lambda_arn = context.invoked_function_arn
-    func_name = traceback.extract_stack(None, 2)[0][2]
-    logger.debug(':{0}:this is the event = {1}'.format(func_name, event))
-    fragment = event["fragment"]
-    params = event['params']
-    try:
-        stack_of_interest = params['stackname']
-    except:
-        raise Exception('stackname parameter was not defined in the macro')
-
-    status = "success"
-    logger.info(':{0}:fragment_before_modification={1}'.format(
-        func_name, fragment))
-
-    try:
-
-        if do_not_skip_processing:
-            update_snapshot(fragment, stack_of_interest)
-            remove_properties(fragment)
-            add_properties(fragment)
-            fragment = point_in_time_restore(fragment, stack_of_interest)
-
-        snapshot_id = check_if_snapshot_identifier_needs_be_added(
-            fragment, stack_of_interest)
-    except:
-        stack_trace = _format_stacktrace()
-        logger.error(":{0}:SOMETHING WENT WRONG:{1}".format(
-            func_name, stack_trace))
-        deployed_template = get_ugc_database_template(stack_of_interest)
-        if deployed_template:
-            fragment = json.loads(deployed_template)
-
-    logger.info(":{0}:fragment_after_modification={1}".format(
-        func_name, fragment))
-    return {
-        "requestId": event["requestId"],
-        "status": status,
-        "fragment": fragment,
-    }
 
 
 def parse_db_identifier(response, key):
@@ -398,3 +352,67 @@ def get_back_retention_period(instances, instance_id):
     for v in instances['DBInstances']:
         if str(v['DBInstanceIdentifier']) in instance_id:
             return int(v['BackupRetentionPeriod'])
+
+
+def delete_db_instance(db_instance_id):
+    func_name = traceback.extract_stack(None, 2)[0][2]
+    response = client.delete_db_instance(
+        DBInstanceIdentifier=db_instance_id, SkipFinalSnapshot=True)
+    logger.debug(":{0}: reponse from deleting instance:{1}".format(
+        func_name, response))
+    return response['DBInstance']['DBInstanceIdentifier']
+
+def get_function_arn(f_name):
+    func_name = traceback.extract_stack(None, 2)[0][2]
+    resp = lambda_client.get_function(FunctionName = f_name)
+    return str(resp['Configuration']['FunctionArn'])
+
+def handler(event, context):
+    level = logging.getLevelName(os.environ['log_level'].rstrip().upper())
+    func_name = traceback.extract_stack(None, 2)[0][2]
+
+    logger.debug(':{0}:this is the event = {1}'.format(func_name, event))
+    do_not_skip_processing = True
+    try:
+        logger.setLevel(level)
+    except ValueError as ve:
+        print("Logger level is not  valid {0}".format(str(ve)))
+        do_not_skip_processing = False
+
+
+    fragment = event["fragment"]
+    params = event['params']
+    try:
+        stack_of_interest = params['stackname']
+    except:
+        raise Exception('stackname parameter was not defined in the macro')
+
+    status = "success"
+    logger.info(':{0}:fragment_before_modification={1}'.format(
+        func_name, fragment))
+
+    try:
+
+        if do_not_skip_processing:
+            update_snapshot(fragment, stack_of_interest)
+            remove_properties(fragment)
+            add_properties(fragment)
+            fragment = point_in_time_restore(fragment, stack_of_interest)
+
+        snapshot_id = check_if_snapshot_identifier_needs_be_added(
+            fragment, stack_of_interest)
+    except:
+        stack_trace = _format_stacktrace()
+        logger.error(":{0}:SOMETHING WENT WRONG:{1}".format(
+            func_name, stack_trace))
+        deployed_template = get_ugc_database_template(stack_of_interest)
+        if deployed_template:
+            fragment = json.loads(deployed_template)
+
+    logger.info(":{0}:fragment_after_modification={1}".format(
+        func_name, fragment))
+    return {
+        "requestId": event["requestId"],
+        "status": status,
+        "fragment": fragment,
+    }

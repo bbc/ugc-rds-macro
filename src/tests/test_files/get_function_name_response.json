@@ -1,0 +1,53 @@
+{
+    "Configuration": {
+        "FunctionName": "int-ugc-rds-macro",
+        "FunctionArn": "arn:aws:lambda:eu-west-2:546933502184:function:int-ugc-rds-macro",
+        "Runtime": "python3.7",
+        "Role": "arn:aws:iam::546933502184:role/ugc-rds-db-macro-FunctionRole-10ZH7C360U4QY",
+        "Handler": "ugc_rds_macro.handler",
+        "CodeSize": 68193226,
+        "Description": "Function used to manipulate the dbinstance template",
+        "Timeout": 900,
+        "MemorySize": 1024,
+        "LastModified": "2019-12-15T22:23:49.665+0000",
+        "CodeSha256": "gMihvroSo7fPLAu/rFNJwiACeENA7e861KtleO1X49c=",
+        "Version": "$LATEST",
+        "VpcConfig": {
+            "SubnetIds": [],
+            "SecurityGroupIds": [],
+            "VpcId": ""
+        },
+        "Environment": {
+            "Variables": {
+                "snapshot_id": "",
+                "restore_point_in_time": "true",
+                "restore_time": "",
+                "log_level": "debug",
+                "properties_to_add": "",
+                "rds_snapshot_stack_name": "mv-rds-db-stack",
+                "snapshot_type": "",
+                "properties_to_remove": "",
+                "replace_with_snapshot": "false"
+            }
+        },
+        "TracingConfig": {
+            "Mode": "PassThrough"
+        },
+        "RevisionId": "5b0453ba-d2d1-432d-a8a4-0843fa75c948",
+        "State": "Active",
+        "LastUpdateStatus": "Successful"
+    },
+    "Code": {
+        "RepositoryType": "S3",
+        "Location": "https://awslambda-eu-west-2-tasks.s3.eu-west-2.amazonaws.com/snapshots/546933502184/int-ugc-rds-macro-089ef698-6792-41ea-99f9-82cc1df3dd36?versionId=dnU_KCranHhd3Tk1C.CFLxeqZUbJKQRE&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEA4aCWV1LXdlc3QtMiJIMEYCIQD%2FRs03uMBNp5cC8DwGIltq%2FodJuMHjUkxLs2yVpY9ttwIhAI7FKn%2F3fsYUjCUc3%2FePrGdBQ9%2Fq6FBYabAtHlSYIMaZKtICCGcQARoMNDcyMDM4ODY0MTg4Igzl%2Fr%2Bk3MoyKnIKMFUqrwJrvGGnAGAZS3TdCZ%2Frxuk1Qc7T5WYVRyIj3gNejcYwZGqD1%2BqkNhcHGwbtlKObVdbnOL%2BNu0XoV75tsR30QVsJBwI1Wl1v3u6ZYoVq0R4dZKETx5%2FUXCoqSWXGBSsolmGS%2BFn6ImXAEuZrUsxD%2F9rcRINp1U2e1uwhE0%2Bo0ppH%2FPWyMZdJDFLSLWd7Opuyd61BF5opxXMJQEvzjyzq4rRpiH5E%2B%2BTDHS5fgeBaFWQSRR4XAMd5K%2F%2BVU8jmNwMt7QFkaSGkaUvMb0ab0QGXRsG0cy5H%2FPUrK93Xm4OhqVIxhpTjTXCPw8%2FJ9xtcyzHeug8dFaVy79njQ9xBqksdDuLIVwNFZMDXIBekRhgeZziy5PAoCC4Zfk%2B56927zTWUPAvgj%2Bgd3wjlgXD2%2BaN0EAkwlt7a7wU6zAJjDK4VLyb5Aihp13uMXWM06xYfiR2xQXgYhw6qHyLI8rle1foJ3P5oBYZ9lKQQsTS0Wuf1nXJ%2BSe9U5rN3q2HEAwrtBryOceHf3rcvu0PPWJkIV9w4huXl6I3%2FWfXvOJaK9OSBPRv5P6dRQPoX4qkB%2F8DDcKLGtoBW46MAmB7uKRpklQm9c%2FoeGSU8njZULcibpsRfqoLAEh50ZIqGC9TIHZiy%2BSOsX4YTXIbP%2FAHB7UjUIkPjDHNrU77bo11JUyFN8p%2Fa%2FhtUhzPuvBm73U9IBXXg%2BDzQ%2FIJAkz4HNENfdExEGSQJNXNMcB%2Bf1r3JNu%2BpZUdwjUemUhBq6wb62LHHoTFQnkcw2m4pwBAKMPQnlO6%2F%2FkYqReOxGtU2vofjLwGHZCCJyr2cUE5tlvNkIpoKKnnDAP0YEnUqNsaMYsA9mUsZIZPUBJWY6kFu1w%3D%3D&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20191215T223904Z&X-Amz-SignedHeaders=host&X-Amz-Expires=600&X-Amz-Credential=ASIAW3Z5VOU6B52D7WXS%2F20191215%2Feu-west-2%2Fs3%2Faws4_request&X-Amz-Signature=a0a8d091c6503af507aed13dbb59ff0e5e44ecfa48ad4b42b90590e25c907ce5"
+    },
+    "Tags": {
+        "aws:cloudformation:stack-name": "ugc-rds-db-macro",
+        "aws:cloudformation:stack-id": "arn:aws:cloudformation:eu-west-2:546933502184:stack/ugc-rds-db-macro/ef020480-19c5-11ea-9f4f-0617023ccf6e",
+        "aws:cloudformation:logical-id": "RdsSnapShotLambdaFunction",
+        "ugc:point-in-time:dbinstance": "tdi41f02b2e-6ef3-44a6-b897-f32d8344d2b4"
+    },
+    "Concurrency": {
+        "ReservedConcurrentExecutions": 1
+    }
+}

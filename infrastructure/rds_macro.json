@@ -148,7 +148,25 @@
                                 },
                                 {
                                     "Action": [
+                                        "lambda:GetFunction"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": [
+                                        "*"
+                                    ]
+                                },
+                                {
+                                    "Action": [
                                         "lambda:ListTags"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": [
+                                        "*"
+                                    ]
+                                },
+                                {
+                                    "Action": [
+                                        "rds:DeleteDBInstance"
                                     ],
                                     "Effect": "Allow",
                                     "Resource": [
@@ -254,7 +272,7 @@
                         "properties_to_add": "",
                         "properties_to_remove": "",
                         "rds_snapshot_stack_name": "mv-rds-db-stack",
-                        "replace_snapshot": "false",
+                        "replace_with_snapshot": "false",
                         "restore_point_in_time": "false",
                         "restore_time": "2019-09-07T23:45:00Z",
                         "snapshot_id": "",
@@ -277,7 +295,7 @@
                     ]
                 },
                 "Runtime": "python3.7",
-                "Timeout": 180
+                "Timeout": 900
             },
             "Type": "AWS::Lambda::Function"
         }
