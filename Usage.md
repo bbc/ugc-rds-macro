@@ -1,7 +1,7 @@
 NOTE: It takes approximately 20 minutes to create a new database using cloudformation.
 
 
-### 1: Create inital database:
+### 1: No Modification:
 
 The following configuration will cause the cloudformation macro to pass the template without any modification. i.e Replicate live.
 
@@ -15,13 +15,7 @@ Lambda Configuration:
 
 ##### Outcome
 
-Creates an empty database called ugc with not tables etc:
-
-To login you will need the database username and password you used to intially create it.
-
-It creates a new url for connecting to the database: ie.
-
-`mv-ugc-postgres.c66kz9sr8urn.eu-west-2.rds.amazonaws.com`
+The supplied template will be returned as is, unless the deployed template has a snapshot id but the supplied does not, in this case supplied template will be inserted with the snapshot id of the deployed template.
 
 ### 2: Restore to latest snapshot:
 

@@ -73,7 +73,6 @@ Create operations do not happen instantaneously, the following lambda tags are u
 | ------------------------------------- | --------------------------------------------------------- |
 | ugc:point-in-time:dbinstance          | waiting for point in time restore to complete             |
 | ugc:point-in-time:snapshot:dbinstance | waiting for snapshot of point in time restore to complete |
-| ugc:create-snaphost:dbinstance        | waiting for snapshot to complete                          |
 
 
 

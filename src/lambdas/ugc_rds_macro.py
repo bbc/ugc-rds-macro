@@ -325,9 +325,9 @@ def point_in_time_restore(fragment, stack_of_interest, deployed_template):
 
         elif restored_snap_shot_id and snapshot_state.lower() in "available":
              _create_snapshot_point_in_time(fragment, restored_snap_shot_id)
-             remove_tag(point_in_time_snapshot_db_instance_tag, lambda_arn)
              db = get_tagged_db_instance_from_restore_id(lambda_arn)
              delete_db_instance(db)
+             remove_tag(point_in_time_snapshot_db_instance_tag, lambda_arn)
              
         else:
             if state != None:
