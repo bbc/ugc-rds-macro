@@ -2,6 +2,18 @@
 
 AWS cloudformation macro that is used to manipulate template fragment of type `AWS::RDS::DBInstance`
 
+When using macros, stack updates should be done via creating a changeset otherwise the lambda will be invoked multiple times. https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-updating-stacks-changesets-execute.html
+
+
+
+Creating snapshots and Point in time restore do not usually happen instantaneously. Therefore the following process should be followed for performing stack updates.
+
+1. Initiate the operation.
+2. Wait for the creation operation to complete.
+3. Initiate the operation again.
+
+
+
 ### Usage
 
 Due to  validation constraints imposed by troposphere it makes it slightly arduos to specify the transform, when using this macro in your template. The following is provided by troposhere to support fn intinsic functions https://github.com/cloudtools/troposphere/blob/master/troposphere/__init__.py#L391.
@@ -19,7 +31,7 @@ for key, value in y.items():
                 v.update(k)
 ```
 
-This file [TestResults.md](TestResults.md) contains examples of how to configure the lambda to perform the different operations.
+This file [Usage.md](Usage.md) contains examples of how to configure the lambda to perform the different operations.
 
 ### Lambda
 
@@ -48,6 +60,20 @@ Within *src* directory type the following:
 `python -m pytest`
 
 `NOTE`: All tests that invoke operations that use `get_template` cloudformation api have been skipped because of an issue with the stubber provided by boto3. The following issue as been raised: https://github.com/boto/botocore/issues/1911
+
+
+
+##### Lamba State
+
+Create operations do not happen instantaneously, the following lambda tags are used to maintain the state. The table below describes the meaning of these tags.
+
+
+
+| Global Tag                            | Meaning                                                   |
+| ------------------------------------- | --------------------------------------------------------- |
+| ugc:point-in-time:dbinstance          | waiting for point in time restore to complete             |
+| ugc:point-in-time:snapshot:dbinstance | waiting for snapshot of point in time restore to complete |
+| ugc:create-snaphost:dbinstance        | waiting for snapshot to complete                          |
 
 
 

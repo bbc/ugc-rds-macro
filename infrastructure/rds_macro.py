@@ -102,7 +102,7 @@ function_role = t.add_resource(
                 ), Statement(
                     Effect=Allow,
                     Action=[Action("lambda", "ListTags")],
-                    Resource=["*"]
+                    Resource=[" *"]
                 ), Statement(
                     Effect=Allow,
                     Action=[

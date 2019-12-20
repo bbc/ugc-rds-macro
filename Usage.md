@@ -97,13 +97,13 @@ The following configuration is used to remove *BackupRetentionPeriod* and *DBNam
 
 ### 6: Restore to Latest Restorable Point:
 
-Before performing a point in time restore make sure lambda tag **ugc:point-in-time:dbinstance** does not exist.
+Before performing a point in time restore make sure there are no lambda tags that begin with **ugc:**
 
-The lambda configuration below needs to be invoked twice.
+The lambda configuration below needs to be invoked three times.
 
 ###### 1:First Invocation of the lambda:
 
-​	Create the db instance to latest restorable time, this process is dependent on the size of the database.
+​	Create the db instance to the latest restorable time, this process is dependent on the size of the database.
 
 ​	Creates a lambda tag **ugc:point-in-time:dbinstance** using the new instance id as the value.
 
@@ -111,9 +111,11 @@ The lambda configuration below needs to be invoked twice.
 
 ​	Creates a snaphost of the instance specified by the lambda tag: **ugc:point-in-time:dbinstance**
 
-​	creates a new database using the snapshot.
+​	If the operation does not happen instantaneously it will create the following lambda tag **ugc:point-in-time:snapshot:dbinstance** using the snapshot id as the value.  
 
-NOTE: This will not do anything until the state of db instance specified by the tag **ugc:point-in-time:dbinstance** is in the *Available* state. Therefore you may need to invoke the lamba multiple times.
+###### 3:Third Invocation of the lambda:
+
+​	Updates the stack with the snapshot id.
 
 | Property              | Value |      |
 | --------------------- | ----- | ---- |
@@ -125,9 +127,9 @@ NOTE: This will not do anything until the state of db instance specified by the 
 
 ### 7: Restore to a specific point in time:
 
-Before performing a point in time restore make sure the lambda tag **ugc:point-in-time:dbinstance** does not exist.
+Before performing a point in time restore make sure there are no lambda tags that begin with **ugc:**
 
-The lambda configuration below needs to be invoked twice.
+The lambda configuration below needs to be invoked three times.
 
 ###### 1:First Invocation of the lambda:
 
@@ -139,9 +141,13 @@ The lambda configuration below needs to be invoked twice.
 
 ​	Creates a snaphost of the instance specified by the lambda tag: **ugc:point-in-time:dbinstance**
 
-​	creates a new database using the snapshot.
+​	If the operation does not happen instantaneously it will create the following lambda tag **ugc:point-in-time:snapshot:dbinstance** using the snapshot id as the value.  
 
-NOTE: This will not do anything until the state of db instance specified by the tag **ugc:point-in-time:dbinstance** is in the *Available* state. Therefore you may need to invoke the lamba multiple times.
+###### 3:Third Invocation of the lambda:
+
+​	Updates the stack with the snapshot id.
+
+
 
 | Property              | Value                |
 | --------------------- | -------------------- |

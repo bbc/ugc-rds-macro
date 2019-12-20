@@ -1,0 +1,29 @@
+{
+    "DBSnapshots": [
+        {
+            "DBSnapshotIdentifier": "rsi411d389f-7ced-4f72-84db-eb7eb3386628",
+            "DBInstanceIdentifier": "tdice8f619a-d302-41a8-8f81-d937a4d61f40",
+            "SnapshotCreateTime": "2019-12-19T14:52:34Z",
+            "Engine": "postgres",
+            "AllocatedStorage": 20,
+            "Status": "available",
+            "Port": 5432,
+            "AvailabilityZone": "eu-west-2b",
+            "VpcId": "vpc-191e6a70",
+            "InstanceCreateTime": "2019-12-19T14:34:39.953Z",
+            "MasterUsername": "ugc",
+            "EngineVersion": "9.6.15",
+            "LicenseModel": "postgresql-license",
+            "SnapshotType": "manual",
+            "OptionGroupName": "default:postgres-9-6",
+            "PercentProgress": 100,
+            "StorageType": "standard",
+            "Encrypted": true,
+            "KmsKeyId": "arn:aws:kms:eu-west-2:546933502184:key/e5526828-e24b-44b6-92be-232868c52834",
+            "DBSnapshotArn": "arn:aws:rds:eu-west-2:546933502184:snapshot:rsi411d389f-7ced-4f72-84db-eb7eb3386628",
+            "IAMDatabaseAuthenticationEnabled": false,
+            "ProcessorFeatures": [],
+            "DbiResourceId": "db-S6SAGPSNZZD6ACETSUAPNXM56I"
+        }
+    ]
+}
