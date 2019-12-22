@@ -7,7 +7,7 @@
       - [Lambda State](#lambda--state)
       - [Lambda Configuration](#lambda-configuration)
   - [Development](#development)
-  - [Running unit Tests](#running--tests)
+  - [Running unit Tests](#unit--tests)
   - [Cloudformation Stack](#cloudformation--stack)
   - [Connect to Database](#connect--to--database)
   - [Point In Time Restore](#point--in--time--restore)
@@ -93,14 +93,13 @@ Below are the list of global environment variables used by the lambda
 | properties_to_remove    | a comma seperated list of items to remove.                   | BackupRetentionPeriod, DBName                                |
 | snap_shot_type          | For accepatable values refer to this:https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/rds.html#RDS.Client.describe_db_snapshots | shared                                                       |
 
-
 # Development
 
 After making code changes run the following command to create a new zip, upload to s3 and update the lambda.
 
 ``upload.sh``
 
-# Running Tests
+# Unit Tests
 
 Within *src* directory type the following:
 
