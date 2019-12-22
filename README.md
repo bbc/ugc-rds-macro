@@ -7,7 +7,7 @@
       - [Lambda State](#lambda--state)
       - [Lambda Configuration](#lambda-configuration)
   - [Development](#development)
-  - [Running unit Tests](#runing--tests)
+  - [Running unit Tests](#running--tests)
   - [Cloudformation Stack](#cloudformation--stack)
   - [Connect to Database](#connect--to--database)
   - [Point In Time Restore](#point--in--time--restore)
@@ -64,7 +64,7 @@ Below are a list of steps you should follow to setup the lambda. After completin
 | Upload zip file to bucket.        | `aws s3 cp rdsmacroinstance.zip s3://rds-snapshot-id-lambda` |
 
 
-## Lamba State
+## Lambda State
 
 Create operations do not happen instantaneously, the following lambda tags are used to maintain the state. The table below describes the meaning of these tags.
 
@@ -100,7 +100,7 @@ After making code changes run the following command to create a new zip, upload 
 
 ``upload.sh``
 
-# Runing Tests
+# Running Tests
 
 Within *src* directory type the following:
 
