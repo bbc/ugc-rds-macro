@@ -1,17 +1,17 @@
 # Contents
 
-- Introduction
-  - [UGC rds macro](#ugc-rds-macro)
-	- [Usage](#usage)
-	- [Lambda](#lambda)
-     - [Setup](#setup)
-     - [Lambda State](#lambda--state)
-     - [Lambda Configuration](#lambda-configuration)
+- UGC RDS Macro
+ - [UGC rds macro](#ugc-rds-macro)
+  - [Usage](#usage)
+  - [Lambda](#lambda)
+      - [Setup](#setup)
+      - [Lambda State](#lambda--state)
+      - [Lambda Configuration](#lambda-configuration)
   - [Development](#development)
   - [Running unit Tests](#runing--tests)
-	- [Cloudformation Stack](#cloudformation--stack)
-	- [Connect to Database](#connect--to--database)
-	- [Point In Time Restore](#point--in--time--restore)
+  - [Cloudformation Stack](#cloudformation--stack)
+  - [Connect to Database](#connect--to--database)
+  - [Point In Time Restore](#point--in--time--restore)
 
 # ugc-rds-macro
 
