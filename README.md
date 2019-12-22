@@ -26,7 +26,7 @@ Creating snapshots and Point in time restore do not usually happen instantaneous
 2. Wait for the creation operation to complete.
 3. Initiate the operation again.
 
-NOTE: Before creating a snapshot items outline [here](BackupIssues.mds) should be considered.
+NOTE: Before creating a snapshot items outline [here](BackupIssues.md) should be considered.
 
 
 # Usage
