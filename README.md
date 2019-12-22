@@ -1,8 +1,7 @@
 # Contents
 
-- UGC RDS Macro
  - [UGC rds macro](#ugc-rds-macro)
-  - [Usage](#usage)
+  - [Referencing the macro](#usage)
   - [Lambda](#lambda)
       - [Setup](#setup)
       - [Lambda State](#lambda--state)
@@ -35,13 +34,15 @@ Due to  validation constraints imposed by troposphere it makes it slightly arduo
 
 But found the process to be slightly obtuse. So used the following approach instead.
 
-```y = json.loads(t.to_json())
+```
 y = json.loads(t.to_json())
 for key, value in y.items():
     if key == "Resources":
         for k, v in value.items():
-            if  k == "RdsPostGresDatabase":
-                d = {'Name':'UgcRdsMacro'} 
+            if  k == "UGCDatabase":
+                f = {'Ref' : 'AWS::StackName'}
+                s = {'stackname' : f}
+                d = {'Name':'UgcRdsMacro', 'Parameters' : s} 
                 k = {'Fn::Transform': d}
                 v.update(k)
 ```
